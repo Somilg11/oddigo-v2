@@ -1,0 +1,12 @@
+{"level":"info","message":"Server running in development mode on port 3000","timestamp":"2025-12-02T08:43:55.566Z"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-12-02T08:43:55.581Z"}
+{"level":"info","message":"Server running in development mode on port 3000","timestamp":"2025-12-02T08:45:20.552Z"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-12-02T08:45:20.594Z"}
+{"level":"error","status":"error","statusCode":500,"timestamp":"2025-12-02T08:45:24.173Z"}
+{"level":"error","status":"error","statusCode":500,"timestamp":"2025-12-02T08:45:45.612Z"}
+{"level":"info","message":"Server running in development mode on port 3000","timestamp":"2025-12-02T08:46:35.210Z"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-12-02T08:46:35.234Z"}
+{"level":"info","message":"Server running in development mode on port 3000","timestamp":"2025-12-02T08:48:23.868Z"}
+{"level":"info","message":"MongoDB Connected: localhost","timestamp":"2025-12-02T08:48:23.889Z"}
+{"level":"error","status":"error","statusCode":500,"timestamp":"2025-12-02T08:51:38.607Z"}
+{"level":"error","status":"error","statusCode":500,"timestamp":"2025-12-02T08:51:57.961Z"}
