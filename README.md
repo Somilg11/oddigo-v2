@@ -1,6 +1,6 @@
-# Urban Company Clone Backend
+# Oddigo
 
-This is the backend for the Urban Company clone application, built with Node.js, Express, TypeScript, and MongoDB.
+This is the backend for the Oddigo application, built with Node.js, Express, TypeScript, and MongoDB.
 
 ## Features
 
