@@ -1,92 +1,118 @@
 # Data Flow Diagrams (DFD)
 
-This document illustrates how data moves through the InstaServe system, from external entities to processes and data stores.
+This document illustrates how data moves through the InstaServe system, using standard Data Flow Diagram notation.
+
+*   **Square (`[...]`)**: External Entity (Source/Sink)
+*   **Rounded (`(...)`)**: Process (Transformer of data)
+*   **Cylinder (`[(...)]`)**: Data Store (Storage)
+*   **Arrow**: Data Flow
 
 ## 1. Level 0 DFD (Context Diagram)
 
-The broad view of data inputs and outputs between the system and external entities.
+The system as a single black box, showing interactions with external entities.
 
 ```mermaid
 graph TD
     User[User]
     Worker[Worker]
     Admin[Admin]
-    System(InstaServe System)
-    Bank[Payment Processor]
-    Maps[Google Maps]
+    System((InstaServe System))
+    Bank[Payment Gateway]
+    Maps[Google Maps API]
+    OpenAI[OpenAI API]
 
-    User -->|Service Request| System
-    User -->|Payment Info| System
-    System -->|Job Status| User
-    System -->|Receipt| User
+    User -- Service Request --> System
+    User -- Payment Details --> System
+    System -- Booking Confirmation --> User
+    System -- Payment Receipt --> User
 
-    Worker -->|Location Data| System
-    Worker -->|Job Acceptance| System
-    System -->|Job Details| Worker
-    System -->|Payout| Worker
+    Worker -- Location Coordinates --> System
+    Worker -- Job Acceptance --> System
+    Worker -- Job Evidence Img --> System
+    System -- Job Assignments --> Worker
+    System -- Payout Advice --> Worker
 
-    Admin -->|Config & Rules| System
-    System -->|Reports & Alerts| Admin
+    Admin -- Configuration Rules --> System
+    System -- Performance Reports --> System
+    System -- Dispute Alerts --> Admin
 
-    System -->|Charge Request| Bank
-    Bank -->|Transaction Result| System
+    System -- Charge Request --> Bank
+    Bank -- Transaction Status --> System
 
-    System -->|Address| Maps
-    Maps -->|Coordinates/Distance| System
+    System -- Address String --> Maps
+    Maps -- Geocodes & Distance --> System
+
+    System -- Image Data --> OpenAI
+    OpenAI -- Verification Score --> System
 ```
 
-## 2. User Booking Flow (Level 1)
+## 2. Level 1 DFD: Booking & Pricing
 
-Detailed data movement for the booking process.
+Process decomposition of the booking phase.
 
 ```mermaid
 graph LR
-    User -->|1. Service & Location| PriceEngine(Pricing Process)
-    PriceEngine -->|2. Distance Lookup| MapsDB[(Maps Cache)]
-    PriceEngine -->|3. Calculate Price| User
+    User[User]
+    Pricing((1.0 Pricing Process))
+    Booking((2.0 Booking Process))
+    Matching((3.0 Matching Process))
     
-    User -->|4. Confirm & Pay| BookingProcess(Booking Process)
-    BookingProcess -->|5. Payment Token| PaymentGateway
-    PaymentGateway -->|6. Success Token| BookingProcess
+    MapsAPI[Google Maps]
+    PaymentGateway[Payment Gateway]
     
-    BookingProcess -->|7. Create Job Record| JobsDB[(Jobs Database)]
-    BookingProcess -->|8. Trigger Search| MatchProcess(Matchmaking Process)
+    JobStore[(Jobs Database)]
+    MapsCache[(Maps Cache)]
+
+    %% Pricing Flow
+    User -- Svc Type & Location --> Pricing
+    Pricing -- Coordinates --> MapsAPI
+    MapsAPI -- Distance Data --> Pricing
+    Pricing -- Distance Data --> MapsCache
+    Pricing -- Price Estimate --> User
+
+    %% Booking Flow
+    User -- Confirmed Order --> Booking
+    Booking -- Charge Amount --> PaymentGateway
+    PaymentGateway -- Payment Token --> Booking
+    Booking -- New Job Record --> JobStore
+    Booking -- Job ID & Loc --> Matching
 ```
 
-## 3. Worker Fulfillment Flow (Level 1)
+## 3. Level 1 DFD: Fulfillment & Verification
 
-Detailed data movement for job acceptance and completion.
+Process decomposition of the job execution phase.
 
 ```mermaid
 graph LR
-    MatchProcess(Matchmaking Process) -->|1. Job Broadcast| Worker
-    Worker -->|2. Search Criteria Match| MatchProcess
+    Worker[Worker]
+    Matching((3.0 Matching Process))
+    JobExecution((4.0 Execution Process))
+    Verification((5.0 AI Verification))
+    Payout((6.0 Payout Process))
     
-    Worker -->|3. Accept Job Signal| JobMgmt(Job Management)
-    JobMgmt -->|4. Update Status| JobsDB[(Jobs Database)]
-    JobMgmt -->|5. Notify User| User
-    
-    Worker -->|6. OTP Verification| JobMgmt
-    Worker -->|7. Upload Proof Image| Validation(AI Validation Process)
-    Validation -->|8. Analysis Request| OpenAI
-    OpenAI -->|9. Confidence Score| Validation
-    
-    Validation -->|10. Validation Result| JobMgmt
-    JobMgmt -->|11. Release Payment| WalletProcess(Wallet System)
-```
+    JobStore[(Jobs Database)]
+    User[User]
+    OpenAI[OpenAI API]
 
-## 4. Admin Management Flow (Level 1)
+    %% Matching
+    JobStore -- Pending Job Details --> Matching
+    Matching -- Broadcast Alert --> Worker
+    Worker -- Acceptance Signal --> Matching
+    Matching -- Assignment Update --> JobStore
 
-Detailed data movement for administrative tasks.
+    %% Execution
+    Worker -- OTP & Status --> JobExecution
+    JobExecution -- Status Update --> JobStore
+    JobExecution -- Job Started Alert --> User
 
-```mermaid
-graph TD
-    Admin -->|1. Request Metrics| AnalyticsDetails(Analytics Engine)
-    JobsDB[(Jobs Database)] -->|2. Raw Data| AnalyticsDetails
-    AnalyticsDetails -->|3. Reports| Admin
-    
-    Admin -->|4. Review Dispute| DisputeProcess(Dispute Resolution)
-    DisputeProcess -->|5. Get Job Evidence| ValidationDB[(Evidence Store)]
-    DisputeProcess -->|6. Resolution Decision| JobMgmt(Job Management)
-    JobMgmt -->|7. Adjust Payout| WalletProcess
+    %% Verification
+    Worker -- Proof Image --> Verification
+    Verification -- Image Payload --> OpenAI
+    OpenAI -- Confidence Score --> Verification
+    Verification -- Verified Status --> JobStore
+    Verification -- Completion Signal --> Payout
+
+    %% Payout
+    Payout -- Transfer Instruction --> JobStore
+    Payout -- Earnings Update --> Worker
 ```

@@ -101,7 +101,7 @@ graph LR
     Wait --> Receive[Receive Job Broadcast]
     Receive --> Accept[Accept Job]
     Accept --> Navigate[Navigate to Location]
-    Navigate --> Start[Start Job (OTP)]
+    Navigate --> Start["Start Job (OTP)"]
     Start --> Verify[Upload Verification Photo]
     Verify --> Finish[Complete Job]
     Finish --> Earn[Receive Payment]

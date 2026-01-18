@@ -14,7 +14,7 @@ graph TD
 
     subgraph "Edge & Gateway"
         GLB[Global Load Balancer]
-        Edge[Edge Functions (Auth/Rate Limit)]
+        Edge["Edge Functions (Auth/Rate Limit)"]
     end
 
     subgraph "Core Backend Services"

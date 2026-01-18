@@ -116,6 +116,8 @@ classDiagram
     JobService --> MatchingEngine
     JobService --> PricingService
     JobService --> AIService
+    JobService --> AIService
+```
 
 ## 5. Core Algorithms & Logic
 
