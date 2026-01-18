@@ -19,7 +19,13 @@ classDiagram
         +ServiceSelector
         +LocationPicker
         +PriceEstimator
-        +CheckoutFlow
+        +QuoteReviewer
+    }
+    
+    class QuoteReviewer {
+        +displayNewQuote(amount, reason)
+        +acceptAmendment()
+        +rejectAmendment()
     }
 
     class PriceEstimator {
@@ -29,11 +35,12 @@ classDiagram
 
     UserApp --> BookingModule
     BookingModule --> PriceEstimator
+    BookingModule --> QuoteReviewer
 ```
 
 ## 2. Worker App Components
 
-Key components enabling service providers to reliable perform jobs.
+Key components enabling service providers to reliably perform jobs.
 
 ```mermaid
 classDiagram
@@ -44,103 +51,77 @@ classDiagram
         +WalletModule
     }
 
-    class JobFeedModule {
-        +SocketListener
-        +JobCard
-        +AcceptanceTimer
-    }
-
     class ActiveJobModule {
         +NavigationMap
         +OTPInput
+        +ScopeManager
         +PhotoUploader
         +JobStatusManager
     }
+    
+    class ScopeManager {
+        +calculateExtraFee()
+        +submitAmendment(reason, evidence)
+        +listenForApproval()
+    }
 
-    WorkerApp --> JobFeedModule
     WorkerApp --> ActiveJobModule
+    ActiveJobModule --> ScopeManager
 ```
 
-## 3. Admin Dashboard Components
-
-Components for platform management and oversight.
-
-```mermaid
-classDiagram
-    class AdminDashboard {
-        +AnalyticsDashboard
-        +UserTable
-        +WorkerTable
-        +DisputeManager
-        +ServiceConfigurator
-    }
-
-    class DisputeManager {
-        +flaggedJobsList
-        +evidenceViewer(images, AI_score)
-        +resolveDispute(action)
-    }
-
-    AdminDashboard --> DisputeManager
-```
-
-## 4. Backend Service Modules
+## 3. Backend Service Modules
 
 Detailed view of the core logic classes in the backend.
 
 ```mermaid
 classDiagram
     class JobService {
-        +createJob(userId, serviceId, location)
-        +assignWorker(jobId, workerId)
-        +verifyCompletion(jobId, imageUrl)
+        +createJob(userId)
+        +transitionState(jobId, status)
+        +handleScopeCreep(jobId, newQuote)
     }
 
     class MatchingEngine {
-        +findNearbyWorkers(lat, long, radius)
-        +filterByService(workers, serviceType)
-        +broadcastJob(jobId, workerIds)
+        +findWorkers(lat, long)
+        +rankByWilsonScore(workers)
     }
 
-    class PricingService {
-        +calculateBase(serviceId)
-        +calculateDistanceFee(distance)
-        +calculateSurge(activeJobs, onlineWorkers)
+    class RankingService {
+        +calcWilsonScore(positive, total)
+        +calcReliability(onTime, total)
+        +updateWorkerProfile(workerId)
     }
 
-    class AIService {
-        +analyzeImage(imageUrl, context)
-        +returnConfidenceScore()
+    class WarrantyService {
+        +issueWarranty(jobId)
+        +checkWarrantyStatus(jobId)
     }
-
+    
     JobService --> MatchingEngine
-    JobService --> PricingService
-    JobService --> AIService
-    JobService --> AIService
+    MatchingEngine --> RankingService
+    JobService --> WarrantyService
 ```
 
-## 5. Core Algorithms & Logic
+## 4. Core Algorithms & Logic
 
-### 5.1 Dynamic Pricing Algorithm
-The pricing engine is designed to be fair yet profitable, accounting for variable costs and demand.
+### 4.1 Dynamic Pricing Algorithm
 **Formula:** `Total Price = Base Price + (Distance * Rate/km) + Surge Multiplier`
 
-**Logic Flow:**
-1.  **Input:** `basePrice`, `distanceKm`, `activeWorkers`, `pendingJobs`.
-2.  **Surge Calculation:**
-    *   If `pendingJobs / activeWorkers > 1.5`, apply **1.2x** surge.
-    *   If ratio `> 3.0`, apply **1.5x** surge.
-3.  **Distance Cost:** `distanceKm * $5.0`.
-4.  **Final:** `(Base + DistanceCost) * Surge`.
-
-### 5.2 AI Verification Hook
-To ensure quality control without human intervention, we use OpenAI's GPT-4 Vision capabilities.
+### 4.2 AI Verification Hook
 **Workflow:**
-1.  **Upload:** Worker uploads image of finished job to S3.
-2.  **Trigger:** Server acts on `upload_complete` event.
-3.  **Analysis:** Send Image URL to OpenAI with prompt: *"Analyze this image of [Service]. Criteria: [Checklist]. Return satisfaction boolean and confidence score."*
-4.  **Result:**
-    *   **Score > 80%:** Auto-complete job & release payment.
-    *   **Score < 80%:** Flag for manual admin review (Dispute status).
+1.  **Upload:** Worker uploads image of finished job.
+2.  **Analysis:** OpenAI analyzes image against service checklist.
+3.  **Result:** High confidence = Auto-complete. Low confidence = Dispute.
 
-```
+### 4.3 Advanced Ranking (Wilson Score)
+We replace simple averages with a statistical confidence interval to rank workers.
+**Formula (Lower Bound):** 
+`((p + z²/2n) - z * sqrt((p(1-p) + z²/4n)/n)) / (1 + z²/n)`
+Where `p` is positive rate, `n` is total reviews, `z` is confidence level constant (1.96).
+
+### 4.4 Warranty Trigger
+**Logic:**
+When Job enters `COMPLETED` state:
+1.  System generates `WarrantyRecord` (7-day validity).
+2.  Updates User `credit_status`.
+3.  Sends "Warranty Active" notification to Customer.

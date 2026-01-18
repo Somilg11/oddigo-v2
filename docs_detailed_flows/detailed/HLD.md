@@ -47,7 +47,10 @@ graph TB
         AuthService[Auth Service]
         CoreAPI[Core Backend API]
         SocketServer[Socket.io Server]
-        WorkerEngine[Matching Engine]
+        
+        Matcher[Matching Engine]
+        Ranking[Ranking Engine (Wilson Score)]
+        Logic[Business Logic Modules]
     end
 
     subgraph Data_Storage
@@ -67,10 +70,11 @@ graph TB
     CoreAPI --> Cache
     CoreAPI --> ObjectStore
     
-    CoreAPI --> WorkerEngine
-    WorkerEngine --> Cache
+    CoreAPI --> Logic
+    Logic --> Matcher
+    Logic --> Ranking
+    Matcher --> Ranking
     
-    SocketServer --> Cache
     SocketServer <--> UserApp
     SocketServer <--> WorkerApp
 ```
@@ -87,8 +91,15 @@ graph LR
     Location --> Estimate[Get Price Estimate]
     Estimate --> Book[Confirm Booking]
     Book --> track[Track Worker]
-    track --> Complete[Job Completion]
+    track --> ScopeCheck{Scope Creep?}
+    
+    ScopeCheck -- Yes --> ReviewQuote[Review New Quote]
+    ReviewQuote --> ApproveQuote[Approve & Continue]
+    ReviewQuote --> RejectQuote[Reject & Cancel]
+    ScopeCheck -- No --> Complete[Job Completion]
+    
     Complete --> Pay[Payment & Review]
+    Pay --> Warranty[Issue Warranty]
 ```
 
 ## 4. Worker Flow HLD
@@ -98,13 +109,21 @@ The high-level journey of a service provider (Worker/Captain).
 ```mermaid
 graph LR
     Online[Go Online] --> Wait[Wait for Requests]
-    Wait --> Receive[Receive Job Broadcast]
+    Wait --> Receive[Receive Job (Ranked)]
     Receive --> Accept[Accept Job]
     Accept --> Navigate[Navigate to Location]
     Navigate --> Start["Start Job (OTP)"]
-    Start --> Verify[Upload Verification Photo]
+    
+    Start --> Inspect[Inspect Scope]
+    Inspect -- Extra Work --> Amend[Request Amendment]
+    Amend --> WaitApprove[Wait Approval]
+    WaitApprove --> Resume[Resume Job]
+    
+    Inspect -- Normal Scope --> Resume
+    
+    Resume --> Verify[Upload Verification Photo]
     Verify --> Finish[Complete Job]
-    Finish --> Earn[Receive Payment]
+    Finish --> Earn[Receive Payment + Score]
 ```
 
 ## 5. Admin Flow HLD
@@ -116,8 +135,9 @@ graph TD
     Dashboard[Admin Dashboard] --> UserMgmt[User/Worker Management]
     Dashboard --> Disputes[Dispute Resolution]
     Dashboard --> Analytics[Platform Analytics]
-    Dashboard --> Content[Service & Pricing Mgmt]
-
-    Disputes -->|Review AI Flag| ManualReview[Manual Verification]
+    
+    UserMgmt -->|View| RankStats[Wilson Score / Reliability]
+    Disputes -->|Review| ScopeCreepLogs[Amendment Logs]
+    
     UserMgmt -->|Verify| KYC[Worker KYC Check]
 ```
