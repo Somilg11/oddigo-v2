@@ -62,28 +62,26 @@ npx prisma migrate dev --name init
 npm run dev
 ```
 
+## Documentation
+
+Detailed design documents are located in the `docs/detailed/` directory:
+
+*   [**High-Level Design (HLD)**](detailed/HLD.md) - System context and high-level user flows.
+*   [**Low-Level Design (LLD)**](detailed/LLD.md) - Component architecture and core logic.
+*   [**Entity Relationship Diagrams (ERD)**](detailed/ER_DIAGRAMS.md) - Database schema and relationships.
+*   [**Data Flow Diagrams (DFD)**](detailed/DATA_FLOW_DIAGRAMS.md) - detailed data movement analysis.
+*   [**Combined System Flows**](detailed/COMBINED_FLOWS.md) - The unified big picture.
+
 ## Folder Structure
 
-The project follows a modular structure using Next.js App Router.
+The project follows a modular structure.
 
 ```
 instaserve/
+├── docs_detailed_flows/
+│   ├── detailed/           # Design Documents (HLD, LLD, ERD, DFD)
+│   └── README.md           # This file
 ├── prisma/                 # Database ORM
-│   └── schema.prisma       # Database Schema
-├── public/                 # Static assets
-├── src/
-│   ├── app/                # Next.js App Router (Routes & Pages)
-│   │   ├── api/            # Backend API Routes
-│   │   ├── (user)/         # User-facing app routes
-│   │   └── (worker)/       # Worker-facing app routes
-│   ├── components/         # React Components (UI, Shared)
-│   ├── lib/                # Library configurations (Redis, Stripe, OpenAI)
-│   ├── services/           # Business Logic Services (Socket, Matchmaking)
-│   ├── utils/              # Helper functions (Pricing, Formatting)
-│   └── types/              # TypeScript definitions
-├── docs/                   # Documentation & Architecture
-├── .env.example            # Env variable template
-├── next.config.js          # Next.js Config
-├── package.json            # Dependencies & Scripts
-└── tailwind.config.ts      # Styling Configuration
+├── src/                    # Source Code
+└── ...
 ```
