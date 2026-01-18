@@ -1,15 +1,11 @@
-# Data Flow Diagrams (DFD)
+# Data Flow & Interaction Diagrams
 
-This document illustrates how data moves through the InstaServe system, using standard Data Flow Diagram notation.
+This document details the flow of data and control through the InstaServe system.
+Per user request, these are modeled as **Sequence Diagrams** to clearly show the temporal interactions and data exchange between components.
 
-*   **Square (`[...]`)**: External Entity (Source/Sink)
-*   **Rounded (`(...)`)**: Process (Transformer of data)
-*   **Cylinder (`[(...)]`)**: Data Store (Storage)
-*   **Arrow**: Data Flow
+## 1. System Context (Component Interaction)
 
-## 1. Level 0 DFD (Context Diagram)
-
-The system as a single black box, showing interactions with external entities.
+The high-level exchange of data between the System and External Entities.
 
 ```mermaid
 graph TD
@@ -46,73 +42,99 @@ graph TD
     OpenAI -- Verification Score --> System
 ```
 
-## 2. Level 1 DFD: Booking & Pricing
+## 2. Booking & Pricing Flow (Detailed Sequence)
 
-Process decomposition of the booking phase.
+Data flow for calculating price, generating estimates, and confirming a booking.
 
 ```mermaid
-graph LR
-    User[User]
-    Pricing((1.0 Pricing Process))
-    Booking((2.0 Booking Process))
-    Matching((3.0 Matching Process))
-    
-    MapsAPI[Google Maps]
-    PaymentGateway[Payment Gateway]
-    
-    JobStore[(Jobs Database)]
-    MapsCache[(Maps Cache)]
+sequenceDiagram
+    autonumber
+    participant User
+    participant PricingEngine as Pricing Service
+    participant Maps as Maps API
+    participant DB as Jobs Database
+    participant Match as Matching Engine
 
-    %% Pricing Flow
-    User -- Svc Type & Location --> Pricing
-    Pricing -- Coordinates --> MapsAPI
-    MapsAPI -- Distance Data --> Pricing
-    Pricing -- Distance Data --> MapsCache
-    Pricing -- Price Estimate --> User
+    Note over User, PricingEngine: Step 1: Estimation
+    User->>PricingEngine: Request Estimate (ServiceType, Location)
+    PricingEngine->>Maps: Get Distance/Traffic Data
+    Maps-->>PricingEngine: Returns: { dist_km: 5.2, time_mins: 15 }
+    PricingEngine->>DB: Check Active Demand (Surge Check)
+    DB-->>PricingEngine: Returns: { active_jobs: 50, online_workers: 20 }
+    
+    PricingEngine->>PricingEngine: Calc: (Base + 5.2*Rate) * 1.5(Surge)
+    PricingEngine-->>User: Returns Estimate: $45.50
 
-    %% Booking Flow
-    User -- Confirmed Order --> Booking
-    Booking -- Charge Amount --> PaymentGateway
-    PaymentGateway -- Payment Token --> Booking
-    Booking -- New Job Record --> JobStore
-    Booking -- Job ID & Loc --> Matching
+    Note over User, DB: Step 2: Confirmation
+    User->>DB: Create Booking {Price: $45.50}
+    DB-->>User: Booking ID: #998877
+    DB->>Match: Trigger Matchmaker(Job #998877)
 ```
 
-## 3. Level 1 DFD: Fulfillment & Verification
+## 3. Fulfillment & Verification Flow (Detailed Sequence)
 
-Process decomposition of the job execution phase.
+Data flow for job execution, proof submission, and AI verification.
 
 ```mermaid
-graph LR
-    Worker[Worker]
-    Matching((3.0 Matching Process))
-    JobExecution((4.0 Execution Process))
-    Verification((5.0 AI Verification))
-    Payout((6.0 Payout Process))
+sequenceDiagram
+    autonumber
+    participant Worker
+    participant JobMgr as Job Manager
+    participant AI as OpenAI Vision
+    participant DB as Jobs Database
+    participant Wallet as Wallet System
+
+    Note over Worker, JobMgr: On-Site Execution
+    Worker->>JobMgr: Verify OTP (Start Job)
+    JobMgr->>DB: Update Status -> IN_PROGRESS
     
-    JobStore[(Jobs Database)]
-    User[User]
-    OpenAI[OpenAI API]
+    Worker->>JobMgr: Mark Complete & Upload Photo
+    JobMgr->>DB: Save Image URL
+    
+    Note over JobMgr, AI: Auto-Verification
+    JobMgr->>AI: Analyze(ImageURL, ServiceContext)
+    AI-->>JobMgr: Returns { confidence: 92, is_clean: true }
+    
+    alt Score > Threshold (80)
+        JobMgr->>DB: Update Status -> COMPLETED
+        JobMgr->>Wallet: Trigger Payout Calc
+        Wallet->>DB: Credit Worker Wallet ($40)
+        JobMgr-->>Worker: "Job Completed! Payment Processing."
+    else Score Low
+        JobMgr->>DB: Update Status -> DISPUTE_REVIEW
+        JobMgr-->>Worker: "Verification Failed. Admin Reviewing."
+    end
+```
 
-    %% Matching
-    JobStore -- Pending Job Details --> Matching
-    Matching -- Broadcast Alert --> Worker
-    Worker -- Acceptance Signal --> Matching
-    Matching -- Assignment Update --> JobStore
+## 4. Admin & Reporting Flow (Detailed Sequence)
 
-    %% Execution
-    Worker -- OTP & Status --> JobExecution
-    JobExecution -- Status Update --> JobStore
-    JobExecution -- Job Started Alert --> User
+Data flow for administrative monitoring and dispute handling.
 
-    %% Verification
-    Worker -- Proof Image --> Verification
-    Verification -- Image Payload --> OpenAI
-    OpenAI -- Confidence Score --> Verification
-    Verification -- Verified Status --> JobStore
-    Verification -- Completion Signal --> Payout
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Admin
+    participant Analytics as Analytics Engine
+    participant DB as Main Database
+    participant Logs as System Logs
 
-    %% Payout
-    Payout -- Transfer Instruction --> JobStore
-    Payout -- Earnings Update --> Worker
+    Note over Admin, Analytics: Performance Monitoring
+    Admin->>Analytics: Get Weekly Metrics
+    Analytics->>DB: Aggregation Query (Jobs, Revenue)
+    DB-->>Analytics: Returns Data Rows
+    Analytics-->>Admin: Visual Dashboard Data
+
+    Note over Admin, DB: Dispute Resolution
+    Admin->>DB: Fetch Disputed Job #123
+    DB-->>Admin: Returns {WorkerID, ProofImg, AI_Score}
+    
+    Admin->>Admin: Manually Verify Image
+    
+    alt Admin Approves
+        Admin->>DB: Force Complete Job
+        DB->>Logs: Log Action "Admin Override"
+    else Admin Rejects
+        Admin->>DB: Cancel Job & Refund User
+        DB->>Logs: Log Action "Admin Refund"
+    end
 ```

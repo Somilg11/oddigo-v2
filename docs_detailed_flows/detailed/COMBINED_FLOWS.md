@@ -102,8 +102,110 @@ sequenceDiagram
     S-->>W: Show Earnings
 ```
 
-## 3. Unified Data Relationship Snapshot
-A simplified view of how the core data entities relate to support the flow above.
+## 3. Worker Onboarding & KYC Flow
+The journey of a new worker joining the platform, from registration to becoming eligible for jobs.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Worker App
+    participant S as System API
+    participant DB as Database
+    participant Admin as Admin Panel
+
+    W->>S: Register (Phone + OTP)
+    S->>DB: Create Worker Record (Status: PENDING)
+    
+    W->>S: Submit Profile (Name, Skills, Zone)
+    S->>DB: Update Profile
+    
+    Note over W, S: Document Submission
+    W->>S: Upload ID Proof & Licenses
+    S-->>S: Store in S3
+    S->>DB: Mark Documents "Under Review"
+    
+    Admin->>S: Fetch Pending Approvals
+    Admin->>Admin: Manual verification of ID
+    
+    alt Documents Valid
+        Admin->>S: Approve Worker
+        S->>DB: Update Status -> ACTIVE
+        S->>W: Notification "You are now Live!"
+    else Documents Invalid
+        Admin->>S: Reject (Reason: Blurry Image)
+        S->>W: Notif: "Please re-upload ID"
+    end
+```
+
+## 4. Dispute Resolution Flow
+Complex flow involving AI flagging and manual admin intervention when things go wrong.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Worker
+    participant S as System
+    participant AI as AI Service
+    participant A as Admin
+    participant U as User
+
+    Note over W: Job Finished
+    W->>S: Upload Proof Image
+    S->>AI: Analyze Quality
+    
+    alt Low Confidence Score (<80%)
+        AI-->>S: Score: 45/100 (FAIL)
+        S->>S: Flag Job as "DISPUTED"
+        S-->>W: "Job under review"
+        S-->>A: Alert: "Review Job #123"
+        
+        A->>S: View Proof Image & User History
+        
+        opt Verify with User
+            A->>U: Request Feedback
+            U-->>A: "He didn't clean the fan"
+        end
+        
+        A->>S: Final Decision: "PARTIAL REFUND"
+        S->>S: Refund 50% to User
+        S->>S: Pay 50% to Worker
+        S-->>W: Penalty Notice
+    else High Confidence
+        AI-->>S: Score: 90/100 (PASS)
+        S->>S: Proceed to Payment
+    end
+```
+
+## 5. Job Cancellation & Refund Flow
+Handling cancellations after booking but before job completion.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as System
+    participant W as Worker
+    participant P as Payment Gateway
+
+    U->>S: Cancel Job Request
+    S->>S: Check Job Status
+    
+    alt Status = ASSIGNED (Worker on way)
+        S->>S: Calculate Cancellation Fee ($5)
+        S->>P: Charge $5 Fee
+        S->>P: Refund Remaining Amount
+        S->>W: Notify "Job Cancelled"
+        S->>S: Credit $2 to Worker Wallet (Compensation)
+    else Status = CREATED (No worker yet)
+        S->>P: Full Refund
+        S->>S: Close Job
+    end
+    
+    S-->>U: "Cancellation Confirmed"
+```
+
+## 6. Unified Data Relationship Snapshot
+A simplified view of how the core data entities relate to support the flows above.
 
 ```mermaid
 erDiagram
