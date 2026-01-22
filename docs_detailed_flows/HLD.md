@@ -18,11 +18,11 @@ graph TD
         AdminModule[Admin Module]
     end
 
-    Stripe[Stripe Payment]
-    Redis[Redis Cache/Geo]
-    Mongo[(MongoDB)]
-    OpenAI[OpenAI Service]
-    SMTP[Email Service]
+    Stripe["Stripe (Payments)"]
+    Redis["Redis Cache/Geo"]
+    Mongo["(MongoDB)"]
+    OpenAI["OpenAI Service"]
+    SMTP["Email Service"]
 
     User -->|Books/Tracks| API
     Worker -->|Accepts/Completes| API
@@ -53,7 +53,7 @@ graph TB
 
     subgraph Backend_Infrastructure
         LB[Load Balancer]
-        Cluster[Node.js Cluster (Multiple Workers)]
+        Cluster["Node.js Cluster (Multiple Workers)"]
         
         subgraph Core_Services
             Auth[Auth Service]
@@ -125,7 +125,7 @@ The high-level journey of a service provider.
 graph LR
     Online[Go Online] --> Wait[Wait for Requests]
     Wait --> Offer[Receive Job Offer]
-    Offer --> Accept[Accept Job (Race)]
+    Offer --> Accept["Accept Job (Race)"]
     Accept --> Nav[Navigate]
     Nav --> Start[Start Job]
     

@@ -23,11 +23,11 @@ graph TD
     end
 
     subgraph "External Providers"
-        Stripe[Stripe (Payments)]
-        Redis[Redis (OTP/Geo)]
-        SMTP[Nodemailer (Email)]
-        Cloudinary[Cloudinary (Storage)]
-        OpenAI[OpenAI (Vision AI)]
+        Stripe["Stripe (Payments)"]
+        Redis["Redis (OTP/Geo)"]
+        SMTP["Nodemailer (Email)"]
+        Cloudinary["Cloudinary (Storage)"]
+        OpenAI["OpenAI (Vision AI)"]
     end
 
     UserApp --> API
