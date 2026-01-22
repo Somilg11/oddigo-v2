@@ -125,7 +125,7 @@ The high-level journey of a service provider.
 graph LR
     Online[Go Online] --> Wait[Wait for Requests]
     Wait --> Offer[Receive Job Offer]
-    Offer --> Accept[Accept Job]
+    Offer --> Accept[Accept Job (Race)]
     Accept --> Nav[Navigate]
     Nav --> Start[Start Job]
     

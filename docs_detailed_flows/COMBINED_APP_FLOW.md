@@ -64,8 +64,12 @@ sequenceDiagram
     S->>S: MatchingEngine.findWorkers()
     S-->>U: Estimate & Job Created
 
+    S-->>U: Estimate & Job Created
+
     Note over U, W: Phase 2: Execution
-    W->>S: Accept Job & Arrive
+    W->>S: Accept Job (Atomic Lock)
+    S-->>W: Assigned!
+    W->>S: Arrive & Start Job
     W->>S: Start Job
     
     opt Scope Creep (Amendment)
