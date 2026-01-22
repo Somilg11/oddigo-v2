@@ -1,56 +1,73 @@
-import express, { Application } from 'express';
-import cors from 'cors';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
+import rateLimit from 'express-rate-limit';
+import { Logger } from './config/logger';
 
-const app: Application = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
-    },
-});
+const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(cors());
+// Security Middlewares
 app.use(helmet());
-app.use(morgan('dev'));
+app.use(cors({
+    origin: '*', // Configure allowed origins in production
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-import authRoutes from './modules/auth/auth.routes';
-import userRoutes from './modules/user/user.routes';
-import workerRoutes from './modules/worker/worker.routes';
-import adminRoutes from './modules/admin/admin.routes';
-import orderRoutes from './modules/order/order.routes';
-import reviewRoutes from './modules/review/review.routes';
-import contentRoutes from './modules/content/content.routes';
-import errorHandler from './middlewares/errorHandler';
-import { AppError } from './utils/AppError';
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again in 15 minutes'
+});
+app.use('/api', limiter);
 
-// Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/workers', workerRoutes);
-app.use('/api/v1/admin', adminRoutes);
-app.use('/api/v1/orders', orderRoutes);
-app.use('/api/v1/reviews', reviewRoutes);
-app.use('/api/v1/content', contentRoutes);
+// Data Sanitization
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
 
-app.get('/', (req, res) => {
-    res.send('API is running...');
+// Request Logger
+app.use((req: Request, res: Response, next: NextFunction) => {
+    Logger.http(`${req.method} ${req.url}`);
+    next();
 });
 
-// 404 Handler
-// 404 Handler
-app.all(/(.*)/, (req, res, next) => {
-    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+// Body Parsing
+app.use(express.json({ limit: '10kb' })); // Body limit
+app.use(express.urlencoded({ extended: true }));
+
+// Health Check
+app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({ status: 'UP', timestamp: new Date().toISOString() });
 });
+
+// Maintenance Check Middleware
+import { maintenanceMiddleware } from './core/middlewares/maintenance.middleware';
+import routes from './routes';
+
+app.use(maintenanceMiddleware);
+
+// Routes mounting
+app.use('/api', routes);
 
 // Global Error Handler
-app.use(errorHandler);
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    err.statusCode = err.statusCode || 500;
+    err.status = err.status || 'error';
 
+    Logger.error(`${err.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
 
-export { app, httpServer, io };
+    res.status(err.statusCode).json({
+        success: false,
+        status: err.status,
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
+export default app;

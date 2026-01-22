@@ -1,20 +1,15 @@
 import Redis from 'ioredis';
-import logger from './logger';
 
-const redisConfig = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    maxRetriesPerRequest: null,
-};
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-const redis = new Redis(redisConfig);
+const redis = new Redis(REDIS_URL);
 
 redis.on('connect', () => {
-    logger.info('Redis Connected');
+    console.log('✅ Redis Connected');
 });
 
 redis.on('error', (err) => {
-    logger.error('Redis Error', err);
+    console.error('❌ Redis Error:', err);
 });
 
 export default redis;

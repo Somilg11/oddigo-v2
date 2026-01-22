@@ -1,35 +1,30 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
-    ports:
-      - "5000:5000"
-    environment:
-      - PORT=5000
-      - MONGO_URI=mongodb://mongo:27017/oddigo_v2
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=supersecretkey_change_this_in_production
-      - JWT_EXPIRES_IN=7d
-      - NODE_ENV=development
-    depends_on:
-      - mongo
-      - redis
-    volumes:
-      - ./uploads:/usr/src/app/uploads
-
+  # MongoDB Container
   mongo:
     image: mongo:latest
+    container_name: oddigo_mongo
+    restart: always
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password123
 
+  # Redis Container
   redis:
     image: redis:alpine
+    container_name: oddigo_redis
+    restart: always
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
 
 volumes:
-  mongo-data:
+  mongo_data:
+  redis_data:

@@ -1,14 +1,18 @@
 import mongoose from 'mongoose';
-import logger from './logger';
 
-const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect(process.env.MONGO_URI || '');
-        logger.info(`MongoDB Connected: ${conn.connection.host}`);
-    } catch (error: any) {
-        logger.error(`Error: ${error.message}`);
-        process.exit(1);
-    }
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:password123@localhost:27017/oddigo?authSource=admin';
+
+export const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log('✅ MongoDB Connected Successfully');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Error:', error);
+    process.exit(1);
+  }
 };
 
-export default connectDB;
+export const disconnectDB = async () => {
+    await mongoose.disconnect();
+    console.log('✅ MongoDB Disconnected');
+};
