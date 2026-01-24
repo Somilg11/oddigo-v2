@@ -26,8 +26,8 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Data Sanitization
-app.use(mongoSanitize());
-app.use(xss());
+// app.use(mongoSanitize());
+// app.use(xss());
 app.use(hpp());
 
 // Request Logger

@@ -1,0 +1,5 @@
+2026-01-25 00:12:34:1234 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::1[39m
+2026-01-25 00:13:18:1318 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::1[39m
+2026-01-25 00:13:31:1331 [35mhttp[39m: [35mGET /health[39m
+2026-01-24 18:48:11:4811 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::ffff:192.168.65.1[39m
+2026-01-24 18:49:18:4918 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::ffff:192.168.65.1[39m

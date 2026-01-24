@@ -25,6 +25,29 @@ services:
     volumes:
       - redis_data:/data
 
+  # Backend API
+  api:
+    build: .
+    container_name: oddigo_api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://root:password123@mongo:27017/oddigo?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=docker_jwt_secret
+      - JWT_EXPIRES_IN=7d
+      - REFRESH_SECRET=docker_refresh_secret
+      - REFRESH_EXPIRES_IN=30d
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
 volumes:
   mongo_data:
   redis_data:

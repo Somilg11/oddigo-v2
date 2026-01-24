@@ -59,7 +59,6 @@ const UserSchema: Schema = new Schema({
 });
 
 // Indexes
-UserSchema.index({ email: 1 });
-UserSchema.index({ phone: 1 });
+
 
 export const User = mongoose.model<IUser>('User', UserSchema);
