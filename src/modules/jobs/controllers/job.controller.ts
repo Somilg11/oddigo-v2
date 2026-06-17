@@ -68,15 +68,104 @@ export class JobController {
         }
     }
 
-    static async completeJob(req: AuthRequest, res: Response, next: NextFunction) {
+    static async requestJobOtp(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const { proofUrl } = req.body;
-            const job = await JobService.completeJob(req.params.id, req.user._id, proofUrl);
+            const result = await JobService.requestJobOtp(req.params.id, req.user._id);
+            res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async verifyJobOtp(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { otp } = req.body;
+            const job = await JobService.verifyJobOtp(req.params.id, req.user._id, otp);
             res.status(200).json({ success: true, data: job });
         } catch (error) {
             next(error);
         }
     }
+
+    static async submitEstimate(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const job = await JobService.submitEstimate(req.params.id, req.user._id, req.body);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async approveFinalPrice(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { approved } = req.body;
+            const job = await JobService.approveFinalPrice(req.params.id, req.user._id, approved);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async addBeforePhoto(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { photoUrl } = req.body;
+            const job = await JobService.addBeforePhoto(req.params.id, req.user._id, photoUrl);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async addAfterPhoto(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { photoUrl } = req.body;
+            const job = await JobService.addAfterPhoto(req.params.id, req.user._id, photoUrl);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async completeJob(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { proofUrl, customerSignature } = req.body;
+            const job = await JobService.completeJob(req.params.id, req.user._id, proofUrl, customerSignature);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async submitDigitalSignature(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { signatureData } = req.body;
+            const job = await JobService.submitDigitalSignature(req.params.id, req.user._id, signatureData);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async processPayment(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { paymentMethod } = req.body;
+            const result = await JobService.processPayment(req.params.id, paymentMethod);
+            res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async refundJob(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { reason } = req.body;
+            const job = await JobService.refundJob(req.params.id, reason);
+            res.status(200).json({ success: true, data: job });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static async getHistory(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const jobs = await JobService.getJobHistory(req.user._id, req.user.role);
@@ -85,6 +174,7 @@ export class JobController {
             next(error);
         }
     }
+
     static async cancelJob(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const job = await JobService.cancelJob(req.params.id, req.user._id);
@@ -96,9 +186,9 @@ export class JobController {
 
     static async getEstimate(req: Request, res: Response, next: NextFunction) {
         try {
-            const { serviceType, lat, long } = req.body;
-            const price = await JobService.getEstimate(serviceType, lat, long);
-            res.status(200).json({ success: true, data: { price } });
+            const { serviceType, lat, long, subServiceId } = req.body;
+            const estimate = await JobService.getEstimate(serviceType, lat, long, subServiceId);
+            res.status(200).json({ success: true, data: estimate });
         } catch (error) {
             next(error);
         }

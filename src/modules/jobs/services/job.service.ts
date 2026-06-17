@@ -1,4 +1,4 @@
-import { Job, JobStatus, IJob } from '../models/Job';
+import { Job, JobStatus, IJob, PaymentMethod, PaymentStatus } from '../models/Job';
 import { PricingEngine } from '../../pricing/pricing.engine';
 import { MatchingEngine } from '../../matching/matching.engine';
 import { WarrantyService } from '../../warranty/services/warranty.service';
@@ -6,6 +6,13 @@ import { SocketService } from '../../socket/services/socket.service';
 import { AppError } from '../../../core/errors/AppError';
 import { IUser } from '../../users/models/User';
 import ServiceFactory from '../../../core/services/service.factory';
+import redis from '../../../config/redis';
+import { Logger } from '../../../config/logger';
+import { PricingType } from '../../services/models/SubService';
+
+const generateOTP = (): string => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 export class JobService {
 
@@ -14,20 +21,27 @@ export class JobService {
             throw new AppError('Location and Service Type are required', 400);
         }
 
-        const estimatedPrice = PricingEngine.getEstimate(data.serviceType, 5); // 5km Default
+        const distanceKm = 5;
+        const pricing = await PricingEngine.getEstimate(data.serviceType, distanceKm, data.subService?.toString());
 
         const job = await Job.create({
             ...data,
             customer: customer._id,
-            initialQuote: estimatedPrice,
+            initialQuote: pricing.totalEstimate,
             status: JobStatus.CREATED
         });
+
+        Logger.info(`Job created: ${job._id} by customer ${customer._id}`);
 
         return job;
     }
 
     static async getJob(id: string) {
-        const job = await Job.findById(id).populate('customer').populate('worker');
+        const job = await Job.findById(id)
+            .populate('customer', 'name email phone avatarUrl')
+            .populate('worker', 'name email phone avatarUrl')
+            .populate('subService', 'name slug basePrice estimatedTime pricingType');
+
         if (!job) throw new AppError('Job not found', 404);
         return job;
     }
@@ -44,12 +58,11 @@ export class JobService {
         await job.save();
 
         const workers = await MatchingEngine.findBestWorkers(
-            job.location.coordinates[1], // Latitude
-            job.location.coordinates[0], // Longitude
+            job.location.coordinates[1],
+            job.location.coordinates[0],
             job.serviceType
         );
 
-        // Notify Workers
         workers.forEach((worker) => {
             SocketService.emitToUser(worker.user.toString(), SocketService.BROADCAST_JOB_OFFER, {
                 jobId: job._id,
@@ -58,28 +71,15 @@ export class JobService {
             });
         });
 
+        Logger.info(`Found ${workers.length} workers for job ${jobId}`);
         return workers;
     }
 
     static async acceptJob(jobId: string, workerId: string) {
-        // Atomic update: Only accept if status is MATCHING and NO worker assigned
         const job = await Job.findOneAndUpdate(
             { _id: jobId, status: JobStatus.MATCHING, worker: { $exists: false } },
             {
-                status: JobStatus.IN_PROGRESS, // Or separate ACCEPTED state? Let's go straight to IN_PROGRESS for simplicity or add ACCEPTED.
-                // The flow said: Matching -> In Progress. 
-                // But startJob updates it to IN_PROGRESS. So acceptJob should probably set it to ACCEPTED.
-                // However, JobStatus doesn't have ACCEPTED. Let's start with IN_PROGRESS directly or add ACCEPTED.
-                // Given the current enum, let's use IN_PROGRESS but this implies "Started".
-                // Better: Add ACCEPTED to enum? No, let's stick to IN_PROGRESS being "Assigned & Active".
-                // Actually startJob is "Start Job" (at location). 
-                // Let's add 'ACCEPTED' status to JobStatus enum first? 
-                // User didn't ask to change enum. Let's assume 'MATCHING' -> 'IN_PROGRESS' is the transition.
-                // BUT, 'startJob' logic from before was: worker calls it.
-                // If we make acceptJob do the transition, what does startJob do?
-                // Maybe acceptJob sets worker, and startJob sets startedAt.
-                // Let's use 'MATCHING' -> 'ACCEPTED' (need to add to enum) -> 'IN_PROGRESS'.
-                // I will add ACCEPTED to enum in next tool call.
+                status: JobStatus.ACCEPTED,
                 worker: workerId
             },
             { new: true }
@@ -89,9 +89,7 @@ export class JobService {
             throw new AppError('Job not found or already accepted by another worker', 409);
         }
 
-        // Notify Customer
-        // SocketService.emitToUser(job.customer.toString(), 'job:accepted', { jobId, workerId });
-
+        Logger.info(`Job ${jobId} accepted by worker ${workerId}`);
         return job;
     }
 
@@ -99,18 +97,19 @@ export class JobService {
         const job = await Job.findById(jobId);
         if (!job) throw new AppError('Job not found', 404);
 
-        // Verification: Must be the assigned worker
         if (job.worker?.toString() !== workerId.toString()) {
             throw new AppError('Not authorized. You are not the assigned worker.', 403);
         }
 
-        // If we introduce ACCEPTED, check status. 
-        // if (job.status !== JobStatus.ACCEPTED) ...
+        if (job.status !== JobStatus.ACCEPTED) {
+            throw new AppError('Job must be accepted before starting', 400);
+        }
 
         job.status = JobStatus.IN_PROGRESS;
         job.startedAt = new Date();
         await job.save();
 
+        Logger.info(`Job ${jobId} started by worker ${workerId}`);
         return job;
     }
 
@@ -168,7 +167,64 @@ export class JobService {
         return job;
     }
 
-    static async completeJob(jobId: string, workerId: string, proofUrl: string) {
+    static async requestJobOtp(jobId: string, workerId: string) {
+        const job = await Job.findById(jobId).select('+jobOtp');
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.worker?.toString() !== workerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        if (job.status !== JobStatus.IN_PROGRESS) {
+            throw new AppError('Job must be in progress to verify OTP', 400);
+        }
+
+        const otp = generateOTP();
+        job.jobOtp = otp;
+        job.status = JobStatus.OTP_PENDING;
+        await job.save();
+
+        SocketService.emitToUser(job.customer.toString(), 'job:otp', {
+            jobId: job._id,
+            otp
+        });
+
+        Logger.info(`OTP generated for job ${jobId}`);
+        return { message: 'OTP sent to customer' };
+    }
+
+    static async verifyJobOtp(jobId: string, workerId: string, otp: string) {
+        const job = await Job.findById(jobId).select('+jobOtp');
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.worker?.toString() !== workerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        if (job.status !== JobStatus.OTP_PENDING) {
+            throw new AppError('No OTP pending for this job', 400);
+        }
+
+        if (job.jobOtp !== otp) {
+            throw new AppError('Invalid OTP', 400);
+        }
+
+        job.status = JobStatus.IN_PROGRESS;
+        job.otpVerifiedAt = new Date();
+        job.workerArrivedAt = new Date();
+        job.jobOtp = undefined;
+        await job.save();
+
+        Logger.info(`OTP verified for job ${jobId}`);
+        return job;
+    }
+
+    static async submitEstimate(jobId: string, workerId: string, estimateData: {
+        visitCharge: number;
+        labourCost: number;
+        partsCost: number;
+        notes?: string;
+    }) {
         const job = await Job.findById(jobId);
         if (!job) throw new AppError('Job not found', 404);
 
@@ -176,53 +232,199 @@ export class JobService {
             throw new AppError('Not authorized', 403);
         }
 
-        // AI Verification
-        const aiResult = await ServiceFactory.getAIProvider().analyzeImage(proofUrl, 'Does this image show completed service work?');
-        if (!aiResult.valid || aiResult.confidence < 0.7) {
-            throw new AppError(`Verification Failed: ${aiResult.reasoning}`, 400);
+        const totalEstimate = estimateData.visitCharge + estimateData.labourCost + estimateData.partsCost;
+
+        job.estimate = {
+            ...estimateData,
+            totalEstimate,
+            createdAt: new Date()
+        };
+        job.status = JobStatus.ON_SITE_DIAGNOSIS;
+        await job.save();
+
+        SocketService.emitToUser(job.customer.toString(), 'job:estimate', {
+            jobId: job._id,
+            estimate: job.estimate
+        });
+
+        Logger.info(`Estimate submitted for job ${jobId}: ₹${totalEstimate}`);
+        return job;
+    }
+
+    static async approveFinalPrice(jobId: string, customerId: string, approved: boolean) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.customer.toString() !== customerId.toString()) {
+            throw new AppError('Not authorized', 403);
         }
 
-        // Process Payment (Create Payment Intent)
-        const amountToCharge = job.finalQuote || job.initialQuote;
+        if (!job.estimate) {
+            throw new AppError('No estimate submitted yet', 400);
+        }
 
-        // In a real flow, this returns a client_secret for the frontend to confirm card. 
-        // For this backend demo, we assume "confirm=true" or similar auto-capture if supported by provider info, 
-        // or we just log it as "Intent Created".
-        const payment = await ServiceFactory.getPaymentProvider().createPaymentIntent(
-            amountToCharge,
-            'USD',
-            { jobId: job._id.toString(), description: `Job ${jobId} Payment` }
-        );
-
-        // Since we can't fully capture without a frontend token here, we just check if intent was created.
-        if (!payment || payment.id) {
-            // Assume success if we get an ID back (mock)
+        if (approved) {
+            job.finalQuote = job.estimate.totalEstimate;
+            job.status = JobStatus.REPAIR_IN_PROGRESS;
+            job.repairStartedAt = new Date();
         } else {
-            // throw new AppError('Payment initiation failed', 402);
+            job.status = JobStatus.CANCELLED;
+        }
+
+        await job.save();
+
+        if (job.worker) {
+            SocketService.emitToUser(job.worker.toString(), 'job:price-approved', {
+                jobId: job._id,
+                approved
+            });
+        }
+
+        Logger.info(`Final price ${approved ? 'approved' : 'rejected'} for job ${jobId}`);
+        return job;
+    }
+
+    static async addBeforePhoto(jobId: string, workerId: string, photoUrl: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.worker?.toString() !== workerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        job.beforePhotos.push(photoUrl);
+        await job.save();
+
+        return job;
+    }
+
+    static async addAfterPhoto(jobId: string, workerId: string, photoUrl: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.worker?.toString() !== workerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        job.afterPhotos.push(photoUrl);
+        await job.save();
+
+        return job;
+    }
+
+    static async completeJob(jobId: string, workerId: string, proofUrl: string, customerSignature?: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.worker?.toString() !== workerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        if (job.status !== JobStatus.REPAIR_IN_PROGRESS && job.status !== JobStatus.IN_PROGRESS) {
+            throw new AppError('Job is not in a completable state', 400);
+        }
+
+        const aiResult = await ServiceFactory.getAIProvider().analyzeImage(proofUrl, 'Does this image show completed repair work?');
+        if (!aiResult.valid || aiResult.confidence < 0.7) {
+            throw new AppError(`Verification Failed: ${aiResult.reasoning}`, 400);
         }
 
         job.status = JobStatus.COMPLETED;
         job.completedAt = new Date();
         job.completionProofUrl = proofUrl;
+        job.customerSignature = customerSignature;
 
-        await WarrantyService.issueWarranty(job);
+        const warranty = await WarrantyService.issueWarranty(job);
+        job.warrantyId = warranty._id;
 
-        // Notify Customer
         if (job.customer) {
             SocketService.emitToUser(job.customer.toString(), SocketService.NOTIFICATION_WARRANTY, {
                 jobId: job._id,
-                warranty: true
+                warranty: true,
+                warrantyId: warranty._id
             });
         }
 
         await job.save();
+
+        Logger.info(`Job ${jobId} completed by worker ${workerId}. Awaiting payment.`);
         return job;
     }
+
+    static async submitDigitalSignature(jobId: string, customerId: string, signatureData: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.customer.toString() !== customerId.toString()) {
+            throw new AppError('Not authorized', 403);
+        }
+
+        job.customerSignature = signatureData;
+        await job.save();
+
+        Logger.info(`Digital signature submitted for job ${jobId}`);
+        return job;
+    }
+
+    static async processPayment(jobId: string, paymentMethod: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.status !== JobStatus.COMPLETED) {
+            throw new AppError('Job must be completed before payment', 400);
+        }
+
+        const amount = job.finalQuote || job.initialQuote;
+
+        const payment = await ServiceFactory.getPaymentProvider().createPaymentIntent(
+            amount,
+            'inr',
+            {
+                jobId: (job._id as any).toString(),
+                paymentMethod,
+                description: `Job ${jobId} - ${paymentMethod}`
+            }
+        );
+
+        job.paymentMethod = paymentMethod as PaymentMethod;
+        job.paymentStatus = PaymentStatus.COMPLETED;
+        job.transactionId = payment.id;
+        await job.save();
+
+        Logger.info(`Payment processed for job ${jobId}: ₹${amount} via ${paymentMethod}`);
+        return { job, paymentIntent: payment };
+    }
+
+    static async refundJob(jobId: string, reason: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (!job.transactionId) {
+            throw new AppError('No transaction to refund', 400);
+        }
+
+        const amount = job.finalQuote || job.initialQuote;
+
+        await ServiceFactory.getPaymentProvider().refundPayment(job.transactionId, amount);
+
+        job.paymentStatus = PaymentStatus.REFUNDED;
+        job.status = JobStatus.CANCELLED;
+        await job.save();
+
+        Logger.info(`Refund processed for job ${jobId}: ₹${amount}. Reason: ${reason}`);
+        return job;
+    }
+
     static async getJobHistory(userId: string, role: string) {
         const query = role === 'WORKER' ? { worker: userId } : { customer: userId };
-        const jobs = await Job.find(query).sort({ createdAt: -1 }).populate('customer worker');
+        const jobs = await Job.find(query)
+            .sort({ createdAt: -1 })
+            .populate('customer', 'name email phone avatarUrl')
+            .populate('worker', 'name email phone avatarUrl')
+            .populate('subService', 'name slug basePrice');
         return jobs;
     }
+
     static async cancelJob(jobId: string, userId: string) {
         const job = await Job.findById(jobId);
         if (!job) throw new AppError('Job not found', 404);
@@ -237,10 +439,13 @@ export class JobService {
 
         job.status = JobStatus.CANCELLED;
         await job.save();
+
+        Logger.info(`Job ${jobId} cancelled by customer ${userId}`);
         return job;
     }
 
-    static async getEstimate(serviceType: string, lat: number, long: number) {
-        return PricingEngine.getEstimate(serviceType, 5);
+    static async getEstimate(serviceType: string, lat: number, long: number, subServiceId?: string) {
+        const distanceKm = 5;
+        return PricingEngine.getEstimate(serviceType, distanceKm, subServiceId);
     }
 }

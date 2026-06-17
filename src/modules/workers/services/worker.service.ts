@@ -1,4 +1,5 @@
 import { WorkerProfile } from '../models/WorkerProfile';
+import { Job, JobStatus } from '../../jobs/models/Job';
 import redis from '../../../config/redis';
 import { AppError } from '../../../core/errors/AppError';
 
@@ -13,7 +14,6 @@ export class WorkerService {
     }
 
     static async updateProfile(userId: string, data: any) {
-        // Find and update, or create if not exists (upsert for onboarding)
         const profile = await WorkerProfile.findOneAndUpdate(
             { user: userId },
             { $set: data },
@@ -30,7 +30,7 @@ export class WorkerService {
 
         profile.isOnline = isOnline;
 
-        if (isOnline && (profile as any).verificationStatus !== 'VERIFIED') {
+        if (isOnline && profile.verificationStatus !== 'VERIFIED') {
             throw new AppError('Worker is not verified by Admin yet', 403);
         }
 
@@ -40,7 +40,6 @@ export class WorkerService {
                 coordinates: [location.long, location.lat]
             };
 
-            // Update Redis Geo
             if (isOnline) {
                 await redis.geoadd('workers:locations', location.long, location.lat, userId);
             }
@@ -53,11 +52,8 @@ export class WorkerService {
         await profile.save();
         return profile;
     }
-    static async getStats(userId: string) {
-        // Need to import Job model to aggregate earnings
-        const Job = require('../../jobs/models/Job').Job;
-        const { JobStatus } = require('../../jobs/models/Job');
 
+    static async getStats(userId: string) {
         const profile = await this.getProfile(userId);
 
         const stats = await Job.aggregate([
@@ -65,7 +61,7 @@ export class WorkerService {
             {
                 $group: {
                     _id: null,
-                    totalEarnings: { $sum: "$finalQuote" },
+                    totalEarnings: { $sum: '$finalQuote' },
                     completedJobs: { $count: {} }
                 }
             }

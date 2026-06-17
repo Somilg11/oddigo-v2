@@ -1,7 +1,10 @@
 import { Server, Socket } from 'socket.io';
 import { verifyAccessToken } from '../../../shared/utils/jwt';
 import { User } from '../../users/models/User';
+import { WorkerProfile } from '../../workers/models/WorkerProfile';
 import { NotificationService } from '../../notifications/services/notification.service';
+import redis from '../../../config/redis';
+import { Logger } from '../../../config/logger';
 
 export class SocketService {
     private static io: Server;
@@ -9,7 +12,6 @@ export class SocketService {
     static init(io: Server) {
         this.io = io;
 
-        // Middleware for Auth
         this.io.use(async (socket, next) => {
             try {
                 const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
@@ -20,7 +22,6 @@ export class SocketService {
                 const cleanToken = token.replace('Bearer ', '');
                 const decoded = verifyAccessToken(cleanToken);
 
-                // Attach user to socket
                 socket.data.user = { id: decoded.userId, role: decoded.role };
                 next();
             } catch (err) {
@@ -29,35 +30,45 @@ export class SocketService {
         });
 
         this.io.on('connection', (socket) => {
-            console.log(`🔌 Auth User Connected: ${socket.data.user.id} (${socket.data.user.role})`);
+            Logger.info(`Socket connected: ${socket.data.user.id} (${socket.data.user.role})`);
 
-            // Join their own room
             socket.join(`user:${socket.data.user.id}`);
 
-            // User/Worker Tracking
             socket.on('update-location', async (data: { lat: number, long: number, jobId?: string }) => {
-                // 1. Update Redis Geo-Index (if worker) using WorkerService (need to import)
-                // For now, let's just broadcast if there is an active job.
+                try {
+                    if (socket.data.user.role === 'WORKER') {
+                        await redis.geoadd('workers:locations', data.long, data.lat, socket.data.user.id);
 
-                if (data.jobId) {
-                    // Notify the *other* party in the job.
-                    // Ideally we verify the user is part of the job.
-                    // Broadcast to room 'job:{jobId}'
-                    socket.to(`job:${data.jobId}`).emit('live-tracking', {
-                        userId: socket.data.user.id,
-                        ...data
-                    });
+                        await WorkerProfile.findOneAndUpdate(
+                            { user: socket.data.user.id },
+                            {
+                                lastLocation: {
+                                    type: 'Point',
+                                    coordinates: [data.long, data.lat]
+                                }
+                            }
+                        );
+                    }
+
+                    if (data.jobId) {
+                        socket.to(`job:${data.jobId}`).emit('live-tracking', {
+                            userId: socket.data.user.id,
+                            lat: data.lat,
+                            long: data.long
+                        });
+                    }
+                } catch (error: any) {
+                    Logger.error(`Location update error: ${error.message}`);
                 }
             });
 
-            // Join Job Room
             socket.on('join-job', (jobId: string) => {
                 socket.join(`job:${jobId}`);
-                console.log(`User ${socket.data.user.id} joined Job Room: ${jobId}`);
+                Logger.info(`User ${socket.data.user.id} joined job room: ${jobId}`);
             });
 
             socket.on('disconnect', () => {
-                console.log(`❌ Disconnected: ${socket.data.user.id}`);
+                Logger.info(`Socket disconnected: ${socket.data.user.id}`);
             });
         });
     }
@@ -65,16 +76,15 @@ export class SocketService {
     static async emitToUser(userId: string, event: string, data: any) {
         if (!this.io) return;
 
-        // Persist Notification
         let title = 'New Notification';
         let body = 'You have a new update';
 
         if (event === this.BROADCAST_JOB_OFFER) {
             title = 'New Job Offer!';
-            body = `New ${data.serviceType} job available for $${data.price}`;
+            body = `New ${data.serviceType} job available for ₹${data.price}`;
         } else if (event === this.NOTIFICATION_SCOPE_CREEP) {
             title = 'Amendment Request';
-            body = `Worker requests additional $${data.amount}`;
+            body = `Worker requests additional ₹${data.amount}`;
         } else if (event === this.NOTIFICATION_WARRANTY) {
             title = 'Job Complete';
             body = 'Warranty has been issued for your job';
@@ -82,7 +92,6 @@ export class SocketService {
 
         await NotificationService.create(userId, event, title, body, data);
 
-        // Emit Real-time
         this.io.to(`user:${userId}`).emit(event, data);
     }
 

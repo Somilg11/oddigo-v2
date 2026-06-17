@@ -7,17 +7,30 @@ const router = Router();
 router.use(protect);
 
 router.get('/history', JobController.getHistory);
-router.post('/estimate', JobController.getEstimate); // Public or Protected? Let's make it protected for simplicity or public? Public is better for marketing.
+router.post('/estimate', JobController.getEstimate);
 router.post('/', JobController.createJob);
 router.post('/:id/cancel', JobController.cancelJob);
 router.get('/:id', JobController.getJob);
 router.post('/:id/find-workers', JobController.findWorkers);
 
-// Execution Logic
-router.post('/:id/accept', JobController.acceptJob); // Worker accepts offer
+// Worker Actions
+router.post('/:id/accept', JobController.acceptJob);
 router.patch('/:id/start', JobController.startJob);
-router.post('/:id/amendment', JobController.requestAmendment); // Worker requests
-router.patch('/:id/amendment', JobController.respondToAmendment); // User approves/rejects
+router.post('/:id/request-otp', JobController.requestJobOtp);
+router.post('/:id/verify-otp', JobController.verifyJobOtp);
+router.post('/:id/estimate', JobController.submitEstimate);
+router.post('/:id/before-photo', JobController.addBeforePhoto);
+router.post('/:id/after-photo', JobController.addAfterPhoto);
 router.post('/:id/complete', JobController.completeJob);
+
+// Amendment (Scope Creep)
+router.post('/:id/amendment', JobController.requestAmendment);
+router.patch('/:id/amendment', JobController.respondToAmendment);
+
+// Customer Actions
+router.patch('/:id/final-approval', JobController.approveFinalPrice);
+router.post('/:id/signature', JobController.submitDigitalSignature);
+router.post('/:id/pay', JobController.processPayment);
+router.post('/:id/refund', JobController.refundJob);
 
 export default router;

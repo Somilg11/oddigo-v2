@@ -5,15 +5,25 @@ import { UserRole } from '../../users/models/User';
 
 const router = Router();
 
-// Protect & Restrict to Admin
 router.use(protect);
 router.use(restrictTo(UserRole.ADMIN));
 
 router.get('/health', AdminController.getSystemHealth);
 router.post('/maintenance', AdminController.toggleMaintenance);
-router.post('/verify-worker', AdminController.verifyWorker);
-router.patch('/users/status', AdminController.toggleUserStatus); // Body: { userId, isActive }
 router.get('/analytics', AdminController.getAnalytics);
 router.get('/disputes', AdminController.getDisputes);
+
+// Worker Management
+router.post('/verify-worker', AdminController.verifyWorker);
+router.patch('/users/status', AdminController.toggleUserStatus);
+router.get('/workers/pending-verification', AdminController.getPendingVerifications);
+router.post('/workers/bulk-verify', AdminController.bulkVerify);
+
+// Live Operations
+router.get('/operations/live', AdminController.getLiveOperations);
+
+// Complaint Management
+router.get('/complaints', AdminController.getComplaints);
+router.post('/complaints/:id/resolve', AdminController.resolveComplaint);
 
 export default router;

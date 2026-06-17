@@ -2,22 +2,48 @@ import redis from '../../config/redis';
 import { RankingService } from '../workers/services/ranking.service';
 import { WorkerProfile } from '../workers/models/WorkerProfile';
 import { AppError } from '../../core/errors/AppError';
+import { Logger } from '../../config/logger';
+
+const SERVICE_SKILL_MAP: Record<string, string[]> = {
+    'water-leakage': ['plumber', 'plumbing'],
+    'tap-repair': ['plumber', 'plumbing'],
+    'toilet-repair': ['plumber', 'plumbing'],
+    'pipe-replacement': ['plumber', 'plumbing'],
+    'water-tank-issues': ['plumber', 'plumbing'],
+    'drain-blockage': ['plumber', 'plumbing'],
+    'switch-repair': ['electrician', 'electrical'],
+    'fan-repair': ['electrician', 'electrical'],
+    'wiring-issues': ['electrician', 'electrical'],
+    'mcb-replacement': ['electrician', 'electrical'],
+    'power-outage-troubleshooting': ['electrician', 'electrical'],
+    'inverter-connection': ['electrician', 'electrical'],
+    'socket-installation': ['electrician', 'electrical'],
+    'short-circuit-repair': ['electrician', 'electrical'],
+    'washing-machine-repair': ['electrician', 'electrical', 'appliance-repair'],
+    'ac-servicing': ['ac-technician', 'ac'],
+    'gas-refill': ['ac-technician', 'ac'],
+    'ac-installation': ['ac-technician', 'ac'],
+    'ac-uninstallation': ['ac-technician', 'ac'],
+    'cooling-issue': ['ac-technician', 'ac'],
+    'ac-water-leakage': ['ac-technician', 'ac'],
+    'pcb-repair': ['ac-technician', 'ac', 'electrical'],
+    'bike-mechanic': ['mechanic', 'vehicle'],
+    'car-mechanic': ['mechanic', 'vehicle'],
+    'puncture-repair': ['mechanic', 'vehicle'],
+    'battery-replacement': ['mechanic', 'vehicle'],
+    'car-wash': ['mechanic', 'vehicle', 'car-wash']
+};
 
 export class MatchingEngine {
 
-    // Config
     private static readonly SEARCH_RADIUS_KM = 10;
     private static readonly MAX_WORKERS = 10;
 
-    /**
-     * Finds the best workers for a given location and service type.
-     * 1. Geospatial search from Redis.
-     * 2. Filter by Skills/Service Type (via MongoDB lookups).
-     * 3. Rank by Wilson Score.
-     */
+    static getRequiredSkills(serviceType: string): string[] {
+        return SERVICE_SKILL_MAP[serviceType] || [serviceType];
+    }
+
     static async findBestWorkers(lat: number, long: number, serviceType: string) {
-        // 1. Redis Geo Search
-        // Format: [member, distance, member, distance, ...] because of WITHDIST
         const geoResults: any[] = await redis.georadius(
             'workers:locations',
             long,
@@ -28,26 +54,25 @@ export class MatchingEngine {
         );
 
         if (!geoResults || geoResults.length === 0) {
+            Logger.info(`No workers found within ${this.SEARCH_RADIUS_KM}km for ${serviceType}`);
             return [];
         }
 
-        // Parse internal redis Structure: [[member, distance], [member, distance]] for 'ioredis' usually
-        // But let's handle the specific return type of ioredis.georadius
-        // For 'ioredis', it returns [[member, distance], ...] if WITHDIST is used.
+        const nearbyWorkerIds = geoResults.map((res: any) => res[0]);
 
-        const nearbyWorkerIds = geoResults.map((res: any) => res[0]); // Extract UserIds
+        const requiredSkills = this.getRequiredSkills(serviceType);
 
-        // 2. Fetch Profiles & Filter by Skill
         const eligibleWorkers = await WorkerProfile.find({
             user: { $in: nearbyWorkerIds },
             isOnline: true,
-            skills: serviceType // Simple array membership check
+            skills: { $in: requiredSkills }
         });
 
-        // 3. Rank Results
-        // Mix Distance and Score? For now, purely Score.
-        const rankedWorkers = eligibleWorkers.sort((a, b) => b.wilsonScore - a.wilsonScore);
+        const rankedWorkers = eligibleWorkers
+            .sort((a, b) => b.wilsonScore - a.wilsonScore)
+            .slice(0, this.MAX_WORKERS);
 
+        Logger.info(`Found ${rankedWorkers.length} eligible workers for ${serviceType}`);
         return rankedWorkers;
     }
 }

@@ -1,4 +1,1 @@
-declare module 'xss-clean' {
-    const value: Function;
-    export default value;
-}
+// xss-clean types removed - package no longer in use

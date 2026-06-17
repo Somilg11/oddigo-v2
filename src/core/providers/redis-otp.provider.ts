@@ -1,6 +1,7 @@
 import redis from '../../config/redis';
 import { IOTPProvider, IServiceHealth, IEmailProvider } from '../interfaces/providers.interface';
 import { AppError } from '../errors/AppError';
+import { Logger } from '../../config/logger';
 
 export class RedisOTPProvider implements IOTPProvider {
     public name = 'RedisOTP';
@@ -19,8 +20,21 @@ export class RedisOTPProvider implements IOTPProvider {
         const key = `otp:${to}`;
         await redis.set(key, code, 'EX', this.EXPIRE_SECONDS);
 
-        const html = `<h1>Your OTP</h1><p>${code}</p>`;
-        await this.emailProvider.sendEmail(to, 'Login OTP', html);
+        const html = `
+<!DOCTYPE html>
+<html>
+<head><style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px}.otp-box{background:#f0f0f0;border-radius:10px;padding:20px;text-align:center;margin:20px 0}.otp{font-size:32px;font-weight:bold;letter-spacing:5px;color:#333}</style></head>
+<body>
+<h1>Oddigo - OTP Verification</h1>
+<p>Your One-Time Password (OTP) is:</p>
+<div class="otp-box"><div class="otp">${code}</div></div>
+<p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>
+<p style="color:#666;font-size:12px">If you didn't request this, please ignore this email.</p>
+</body>
+</html>`;
+
+        await this.emailProvider.sendEmail(to, 'Oddigo - Login OTP', html);
+        Logger.info(`OTP sent to ${to}`);
     }
 
     async verify(to: string, code: string): Promise<boolean> {

@@ -3,7 +3,10 @@ import mongoose, { Schema, Document } from 'mongoose';
 export enum UserRole {
     CUSTOMER = 'CUSTOMER',
     WORKER = 'WORKER',
-    ADMIN = 'ADMIN'
+    ADMIN = 'ADMIN',
+    FIELD_EXECUTIVE = 'FIELD_EXECUTIVE',
+    ZONE_MANAGER = 'ZONE_MANAGER',
+    CITY_MANAGER = 'CITY_MANAGER'
 }
 
 export enum CreditStatus {

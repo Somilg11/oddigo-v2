@@ -27,6 +27,7 @@ export interface IWorkerProfile extends Document {
     skills: string[]; // e.g., ['plumber', 'cleaning']
 
     creditEligibility: CreditEligibility;
+    verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
 
     createdAt: Date;
     updatedAt: Date;

@@ -1,6 +1,5 @@
 import cluster from 'cluster';
 import os from 'os';
-import path from 'path';
 
 const numCPUs = os.cpus().length;
 

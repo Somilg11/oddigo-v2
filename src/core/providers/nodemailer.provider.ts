@@ -7,7 +7,10 @@ export class NodemailerProvider implements IEmailProvider {
 
     constructor() {
         this.transporter = nodemailer.createTransport({
-            service: 'gmail', // Placeholder, ideally use env vars
+            service: process.env.SMTP_SERVICE || 'gmail',
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS

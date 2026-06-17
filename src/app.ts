@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import mongoSanitize from 'express-mongo-sanitize';
-import xss from 'xss-clean';
+// xss-clean removed - no types available, using helmet for XSS protection
 import hpp from 'hpp';
 import rateLimit from 'express-rate-limit';
 import { Logger } from './config/logger';
@@ -12,22 +12,29 @@ const app = express();
 // Security Middlewares
 app.use(helmet());
 app.use(cors({
-    origin: '*', // Configure allowed origins in production
+    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate Limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again in 15 minutes'
 });
-app.use('/api', limiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many authentication attempts, please try again in 15 minutes'
+});
+
+app.use('/api', generalLimiter);
+app.use('/api/auth', authLimiter);
 
 // Data Sanitization
-// app.use(mongoSanitize());
-// app.use(xss());
+app.use(mongoSanitize());
 app.use(hpp());
 
 // Request Logger
@@ -54,7 +61,6 @@ app.use(maintenanceMiddleware);
 // Routes mounting
 app.use('/api', routes);
 
-// Global Error Handler
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     err.statusCode = err.statusCode || 500;
