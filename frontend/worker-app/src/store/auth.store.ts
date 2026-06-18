@@ -1,19 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-interface Worker {
-    _id: string;
-    name: string;
-    email: string;
-    serviceType: string;
-    isAvailable: boolean;
-    isVerified: boolean;
-}
+import type { WorkerProfile } from '@/types';
 
 interface AuthState {
-    worker: Worker | null;
+    worker: WorkerProfile | null;
     token: string | null;
-    setAuth: (worker: Worker, token: string) => void;
+    setAuth: (worker: WorkerProfile, token: string) => void;
     setAvailability: (isAvailable: boolean) => void;
     logout: () => void;
 }
@@ -23,15 +15,25 @@ export const useAuthStore = create<AuthState>()(
         (set) => ({
             worker: null,
             token: null,
-            setAuth: (worker, token) => set({ worker, token }),
+            setAuth: (worker, token) => {
+                localStorage.setItem('oddigo_worker_token', token);
+                set({ worker, token });
+            },
             setAvailability: (isAvailable) =>
                 set((state) => ({
-                    worker: state.worker ? { ...state.worker, isAvailable } : null,
+                    worker: state.worker
+                        ? { ...state.worker, isOnline: isAvailable }
+                        : null,
                 })),
-            logout: () => set({ worker: null, token: null }),
+            logout: () => {
+                set({ worker: null, token: null });
+                localStorage.removeItem('oddigo_worker_token');
+                localStorage.removeItem('oddigo_worker');
+            },
         }),
         {
-            name: 'worker-auth-storage',
+            name: 'oddigo_worker_auth',
+            partialize: (state) => ({ worker: state.worker, token: state.token }),
         }
     )
 );

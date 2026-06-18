@@ -1,12 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-interface User {
-    _id: string;
-    name: string;
-    email: string;
-    role: string;
-}
+import type { User } from '@/types';
 
 interface AuthState {
     user: User | null;
@@ -20,11 +14,18 @@ export const useAuthStore = create<AuthState>()(
         (set) => ({
             user: null,
             token: null,
-            setAuth: (user, token) => set({ user, token }),
-            logout: () => set({ user: null, token: null }),
+            setAuth: (user, token) => {
+                localStorage.setItem('oddigo_token', token);
+                set({ user, token });
+            },
+            logout: () => {
+                set({ user: null, token: null });
+                localStorage.removeItem('oddigo_token');
+            },
         }),
         {
-            name: 'auth-storage',
+            name: 'oddigo_user_auth',
+            partialize: (state) => ({ user: state.user, token: state.token }),
         }
     )
 );

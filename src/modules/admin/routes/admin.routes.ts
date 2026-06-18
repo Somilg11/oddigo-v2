@@ -14,6 +14,7 @@ router.get('/analytics', AdminController.getAnalytics);
 router.get('/disputes', AdminController.getDisputes);
 
 // Worker Management
+router.get('/workers', AdminController.getAllWorkers);
 router.post('/verify-worker', AdminController.verifyWorker);
 router.patch('/users/status', AdminController.toggleUserStatus);
 router.get('/workers/pending-verification', AdminController.getPendingVerifications);

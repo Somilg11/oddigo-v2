@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import redis from '../../config/redis';
 import { IOTPProvider, IServiceHealth, IEmailProvider } from '../interfaces/providers.interface';
 import { AppError } from '../errors/AppError';
@@ -7,18 +8,30 @@ export class RedisOTPProvider implements IOTPProvider {
     public name = 'RedisOTP';
     private emailProvider: IEmailProvider;
     private readonly EXPIRE_SECONDS = 600;
+    private readonly MAX_ATTEMPTS = 5;
+    private readonly RATE_LIMIT_SECONDS = 60;
 
     constructor(emailProvider: IEmailProvider) {
         this.emailProvider = emailProvider;
     }
 
     generate(): string {
-        return Math.floor(100000 + Math.random() * 900000).toString();
+        return crypto.randomInt(100000, 999999).toString();
     }
 
     async send(to: string, code: string): Promise<void> {
+        const rateLimitKey = `otp:ratelimit:${to}`;
+        const attempts = await redis.get(rateLimitKey);
+        if (attempts && parseInt(attempts) >= this.MAX_ATTEMPTS) {
+            throw new AppError('Too many OTP requests. Please wait before trying again.', 429);
+        }
+
+        await redis.incr(rateLimitKey);
+        await redis.expire(rateLimitKey, this.RATE_LIMIT_SECONDS);
+
         const key = `otp:${to}`;
         await redis.set(key, code, 'EX', this.EXPIRE_SECONDS);
+        await redis.set(`${key}:attempts`, '0', 'EX', this.EXPIRE_SECONDS);
 
         const html = `
 <!DOCTYPE html>
@@ -41,9 +54,22 @@ export class RedisOTPProvider implements IOTPProvider {
         const key = `otp:${to}`;
         const stored = await redis.get(key);
         if (!stored) throw new AppError('OTP expired', 400);
-        if (stored !== code) throw new AppError('Invalid OTP', 400);
+
+        const attemptsKey = `${key}:attempts`;
+        const attempts = await redis.get(attemptsKey);
+        if (attempts && parseInt(attempts) >= this.MAX_ATTEMPTS) {
+            await redis.del(key);
+            await redis.del(attemptsKey);
+            throw new AppError('Too many OTP attempts. Please request a new OTP.', 429);
+        }
+
+        if (stored !== code) {
+            await redis.incr(attemptsKey);
+            throw new AppError('Invalid OTP', 400);
+        }
 
         await redis.del(key);
+        await redis.del(attemptsKey);
         return true;
     }
 

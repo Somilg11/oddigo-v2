@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { Job, JobStatus } from '../../jobs/models/Job';
 import { User } from '../../users/models/User';
 import { WorkerProfile } from '../../workers/models/WorkerProfile';
@@ -12,7 +12,7 @@ import { AuthRequest } from '../../../core/middlewares/auth.middleware';
 
 export class AdminController {
 
-    static async getSystemHealth(req: Request, res: Response, next: NextFunction) {
+    static async getSystemHealth(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const checks = await Promise.all([
                 ServiceFactory.getEmailProvider().checkHealth(),
@@ -36,7 +36,7 @@ export class AdminController {
         }
     }
 
-    static async toggleMaintenance(req: Request, res: Response, next: NextFunction) {
+    static async toggleMaintenance(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { app, enabled } = req.body;
 
@@ -55,7 +55,7 @@ export class AdminController {
         }
     }
 
-    static async getAnalytics(req: Request, res: Response, next: NextFunction) {
+    static async getAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const totalUsers = await User.countDocuments();
             const totalJobs = await Job.countDocuments();
@@ -95,7 +95,7 @@ export class AdminController {
         }
     }
 
-    static async getDisputes(req: Request, res: Response, next: NextFunction) {
+    static async getDisputes(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const disputes = await Job.find({
                 status: { $in: [JobStatus.CANCELLED_CHARGED, JobStatus.CANCELLED] }
@@ -114,7 +114,46 @@ export class AdminController {
         }
     }
 
-    static async verifyWorker(req: Request, res: Response, next: NextFunction) {
+    static async getAllWorkers(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { page = '1', limit = '20', search } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const filter: Record<string, unknown> = {};
+            if (search) {
+                filter.$or = [
+                    { verificationStatus: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const [workers, total] = await Promise.all([
+                WorkerProfile.find(filter)
+                    .populate('user', 'name email phone isActive avatarUrl')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum),
+                WorkerProfile.countDocuments(filter)
+            ]);
+
+            res.status(200).json({
+                success: true,
+                results: workers.length,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total,
+                    pages: Math.ceil(total / limitNum)
+                },
+                data: workers
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async verifyWorker(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { workerId, status } = req.body;
 
@@ -133,7 +172,7 @@ export class AdminController {
         }
     }
 
-    static async toggleUserStatus(req: Request, res: Response, next: NextFunction) {
+    static async toggleUserStatus(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { userId, isActive } = req.body;
 
@@ -150,7 +189,7 @@ export class AdminController {
         }
     }
 
-    static async getLiveOperations(req: Request, res: Response, next: NextFunction) {
+    static async getLiveOperations(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const busyJobWorkerIds = (await Job.find({
                 status: { $in: [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED, JobStatus.OTP_PENDING] }
@@ -193,14 +232,14 @@ export class AdminController {
         }
     }
 
-    static async getComplaints(req: Request, res: Response, next: NextFunction) {
+    static async getComplaints(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { status, page = '1', limit = '20' } = req.query;
             const pageNum = parseInt(page as string);
             const limitNum = parseInt(limit as string);
             const skip = (pageNum - 1) * limitNum;
 
-            const filter: any = {};
+            const filter: Record<string, unknown> = {};
             if (status) filter.status = status;
 
             const [complaints, total] = await Promise.all([
@@ -230,7 +269,7 @@ export class AdminController {
         }
     }
 
-    static async resolveComplaint(req: Request, res: Response, next: NextFunction) {
+    static async resolveComplaint(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { resolution, refundAmount } = req.body;
 
@@ -248,8 +287,9 @@ export class AdminController {
                     try {
                         await ServiceFactory.getPaymentProvider().refundPayment(job.transactionId, refundAmount);
                         Logger.info(`Refund of ${refundAmount} processed for complaint ${complaint._id}`);
-                    } catch (error: any) {
-                        Logger.error(`Refund failed for complaint ${complaint._id}: ${error.message}`);
+                    } catch (error: unknown) {
+                        const message = error instanceof Error ? error.message : 'Unknown error';
+                        Logger.error(`Refund failed for complaint ${complaint._id}: ${message}`);
                     }
                 }
             }

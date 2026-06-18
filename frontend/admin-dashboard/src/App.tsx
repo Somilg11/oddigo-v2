@@ -1,35 +1,50 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import type { ReactNode } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AdminLayout } from "./components/layout/AdminLayout";
+import LoginPage from "./pages/auth/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import LiveOpsPage from "./pages/operations/LiveOpsPage";
+import AnalyticsPage from "./pages/operations/AnalyticsPage";
+import WorkersListPage from "./pages/workers/WorkersListPage";
+import WorkerDetailPage from "./pages/workers/WorkerDetailPage";
+import PendingVerificationPage from "./pages/workers/PendingVerificationPage";
+import ComplaintsListPage from "./pages/complaints/ComplaintsListPage";
+import ComplaintDetailPage from "./pages/complaints/ComplaintDetailPage";
+import DisputesPage from "./pages/disputes/DisputesPage";
+import SettingsPage from "./pages/settings/SettingsPage";
+import { useAuthStore } from "./store/auth.store";
+
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+    const token = useAuthStore((state) => state.token);
+    if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+    return children;
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+    return (
+        <Router>
+            <Routes>
+                <Route path="/login" element={<LoginPage />} />
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+                <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/operations/live" element={<LiveOpsPage />} />
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                    <Route path="/workers" element={<WorkersListPage />} />
+                    <Route path="/workers/:id" element={<WorkerDetailPage />} />
+                    <Route path="/workers/verification" element={<PendingVerificationPage />} />
+                    <Route path="/complaints" element={<ComplaintsListPage />} />
+                    <Route path="/complaints/:id" element={<ComplaintDetailPage />} />
+                    <Route path="/disputes" element={<DisputesPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                </Route>
+
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Router>
+    );
 }
 
-export default App
+export default App;

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IEmailProvider, IServiceHealth } from '../interfaces/providers.interface';
+import { Logger } from '../../config/logger';
 
 export class NodemailerProvider implements IEmailProvider {
     public name = 'Nodemailer';
@@ -22,14 +23,13 @@ export class NodemailerProvider implements IEmailProvider {
         if (process.env.NODE_ENV === 'test') return;
         try {
             await this.transporter.sendMail({
-                from: `"InstaServe" <${process.env.EMAIL_USER}>`,
+                from: `"Oddigo" <${process.env.EMAIL_USER}>`,
                 to,
                 subject,
                 html
             });
         } catch (error) {
-            console.error('Email Error:', error);
-            // We usually don't throw here to prevent blocking user flow
+            Logger.error(`Email Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -38,8 +38,9 @@ export class NodemailerProvider implements IEmailProvider {
         try {
             await this.transporter.verify();
             return { service: 'Email (SMTP)', status: 'UP', latency: Date.now() - start };
-        } catch (error: any) {
-            return { service: 'Email (SMTP)', status: 'DOWN', error: error.message };
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            return { service: 'Email (SMTP)', status: 'DOWN', error: message };
         }
     }
 }

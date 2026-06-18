@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { User } from '../../../modules/users/models/User';
 import { AppError } from '../../errors/AppError';
-import { signAccessToken, signRefreshToken } from '../../../shared/utils/jwt';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../../shared/utils/jwt';
 import ServiceFactory from '../../services/service.factory';
 import { Logger } from '../../../config/logger';
 
@@ -28,6 +28,42 @@ export class AuthController {
             res.status(200).json({
                 success: true,
                 data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async refreshToken(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { refreshToken } = req.body;
+            if (!refreshToken) {
+                throw new AppError('Refresh token is required', 400);
+            }
+
+            const decoded = verifyRefreshToken(refreshToken);
+
+            const user = await User.findById(decoded.userId).select('+refreshToken');
+            if (!user) {
+                throw new AppError('User not found', 404);
+            }
+
+            if (user.refreshToken !== refreshToken) {
+                throw new AppError('Invalid refresh token', 401);
+            }
+
+            const newAccessToken = signAccessToken(user._id, user.role);
+            const newRefreshToken = signRefreshToken(user._id);
+
+            user.refreshToken = newRefreshToken;
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    accessToken: newAccessToken,
+                    refreshToken: newRefreshToken
+                }
             });
         } catch (error) {
             next(error);
