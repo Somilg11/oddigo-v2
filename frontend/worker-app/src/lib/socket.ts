@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
+import { logger } from './logger';
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 
 let socket: Socket | null = null;
 
@@ -16,15 +17,15 @@ export function getSocket(token: string): Socket {
     });
 
     socket.on('connect', () => {
-        console.log('[Socket] Connected:', socket?.id);
+        logger.info('[Socket] Connected');
     });
 
     socket.on('disconnect', (reason: string) => {
-        console.log('[Socket] Disconnected:', reason);
+        logger.warn('[Socket] Disconnected:', reason);
     });
 
     socket.on('connect_error', (error: Error) => {
-        console.error('[Socket] Connection error:', error.message);
+        logger.error('[Socket] Connection error:', error.message);
     });
 
     return socket;

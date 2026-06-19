@@ -121,7 +121,7 @@ POST /api/jobs/:id/signature       → Customer signs digitally
 POST /api/jobs/:id/pay             → Process payment
 ```
 - Customer chooses: UPI, CARD, CASH, or WALLET
-- Stripe creates PaymentIntent for UPI/CARD
+- Razorpay creates PaymentIntent for UPI/CARD
 - Cash is marked as paid without processing
 - Job status: `COMPLETED` with `paymentStatus: COMPLETED`
 - Warranty is active for 7 days
@@ -352,23 +352,23 @@ socket.on('live-tracking', (data) => { /* Worker location */ });
 ### UPI/Card Payment
 ```
 1. POST /api/jobs/:id/pay { paymentMethod: "UPI" }
-2. Backend creates Stripe PaymentIntent
+2. Backend creates Razorpay PaymentIntent
 3. Returns client_secret to frontend
-4. Frontend confirms payment with Stripe
+4. Frontend confirms payment with Razorpay
 5. Webhook updates payment status
 ```
 
 ### Cash Payment
 ```
 1. POST /api/jobs/:id/pay { paymentMethod: "CASH" }
-2. Backend marks payment as COMPLETED (no Stripe call)
+2. Backend marks payment as COMPLETED (no Razorpay call)
 3. Job is marked as paid
 ```
 
 ### Refund
 ```
 1. POST /api/jobs/:id/refund { reason: "..." }
-2. Backend calls Stripe refund API
+2. Backend calls Razorpay refund API
 3. Payment status updated to REFUNDED
 4. Job status updated to CANCELLED
 ```

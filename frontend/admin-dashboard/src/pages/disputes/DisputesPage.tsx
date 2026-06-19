@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -9,18 +12,23 @@ import type { Job } from "@/types";
 export default function DisputesPage() {
     const [disputes, setDisputes] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchDisputes = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/disputes");
+            setDisputes(extractList(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch disputes";
+            setError(message);
+            logger.error("Failed to fetch disputes:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchDisputes = async () => {
-            try {
-                const response = await api.get("/admin/disputes");
-                setDisputes(response.data.data.items || response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch disputes", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchDisputes();
     }, []);
 
@@ -30,6 +38,10 @@ export default function DisputesPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchDisputes} />;
     }
 
     return (

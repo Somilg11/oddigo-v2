@@ -11,10 +11,16 @@ const app = express();
 
 // Security Middlewares
 app.use(helmet());
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+if (allowedOrigins.length === 0) {
+    Logger.warn('No ALLOWED_ORIGINS configured — CORS will reject all cross-origin requests');
+}
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
 // Rate Limiting
@@ -30,8 +36,16 @@ const authLimiter = rateLimit({
     message: 'Too many authentication attempts, please try again in 15 minutes'
 });
 
+const paymentLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: 'Too many payment attempts, please try again later'
+});
+
 app.use('/api', generalLimiter);
 app.use('/api/auth', authLimiter);
+app.use('/api/jobs/*/pay', paymentLimiter);
+app.use('/api/jobs/*/pay/confirm', paymentLimiter);
 
 // Data Sanitization
 app.use(mongoSanitize());

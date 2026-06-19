@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # MongoDB Container
   mongo:
     image: mongo:latest
     container_name: oddigo_mongo
@@ -11,10 +10,9 @@ services:
     volumes:
       - mongo_data:/data/db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
 
-  # Redis Container
   redis:
     image: redis:alpine
     container_name: oddigo_redis
@@ -25,28 +23,58 @@ services:
     volumes:
       - redis_data:/data
 
-  # Backend API
   api:
     build: .
     container_name: oddigo_api
     restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - MONGO_URI=mongodb://root:password123@mongo:27017/oddigo?authSource=admin
+      - MONGO_URI=mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD}@mongo:27017/oddigo?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=docker_jwt_secret
-      - JWT_EXPIRES_IN=7d
-      - REFRESH_SECRET=docker_refresh_secret
-      - REFRESH_EXPIRES_IN=30d
     depends_on:
       - mongo
       - redis
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+
+  user-app:
+    build:
+      context: ./frontend/user-app
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api
+    container_name: oddigo_user_app
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  worker-app:
+    build:
+      context: ./frontend/worker-app
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api
+    container_name: oddigo_worker_app
+    restart: always
+    ports:
+      - "5174:80"
+    depends_on:
+      - api
+
+  admin-dashboard:
+    build:
+      context: ./frontend/admin-dashboard
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api
+    container_name: oddigo_admin_dashboard
+    restart: always
+    ports:
+      - "5175:80"
+    depends_on:
+      - api
 
 volumes:
   mongo_data:

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,9 +25,11 @@ export default function RatingPage() {
         try {
             await api.post(`/ratings/jobs/${id}/rate`, { rating, review: review || undefined });
             setSubmitted(true);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to submit rating.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to submit rating.";
+            setError(message);
             setLoading(false);
+            logger.error("Failed to submit rating", err);
         }
     };
 

@@ -9,7 +9,7 @@ Endpoints for system administration, monitoring, and analytics.
 ## Endpoints
 
 ### 1. System Health
-Check status of all external providers (Stripe, Email, OTP).
+Check status of all external providers (Razorpay, Email, OTP).
 
 - **URL**: `/health`
 - **Method**: `GET`
@@ -23,7 +23,7 @@ Check status of all external providers (Stripe, Email, OTP).
     "services": [
       { "service": "Email (SMTP)", "status": "UP", "latency": 150 },
       { "service": "OTP Service (Redis)", "status": "UP", "latency": 5 },
-      { "service": "Stripe", "status": "UP", "latency": 200 }
+      { "service": "Razorpay", "status": "UP", "latency": 200 }
     ],
     "maintenance": {
       "userApp": false,

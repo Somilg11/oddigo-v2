@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import type { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,8 +52,10 @@ export default function OTPLoginPage() {
             setEmail(data.email);
             setStep("otp");
             setCooldown(60);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to send OTP. Please try again.";
+            setError(message);
+            logger.error("Failed to send OTP:", err);
         }
     };
 
@@ -58,12 +63,14 @@ export default function OTPLoginPage() {
         try {
             setError(null);
             const response = await api.post("/auth/verify-otp", { email, code: data.code });
-            const { user, accessToken, refreshToken } = response.data.data;
-            setAuth(user, accessToken);
+            const { user, accessToken, refreshToken } = extractData<{ user: User; accessToken: string; refreshToken: string }>(response);
+            setAuth(user as any, accessToken);
             localStorage.setItem("oddigo_worker_refresh_token", refreshToken);
             navigate("/");
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Invalid OTP. Please try again.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Invalid OTP. Please try again.";
+            setError(message);
+            logger.error("OTP verification failed:", err);
         }
     };
 
@@ -72,8 +79,10 @@ export default function OTPLoginPage() {
             setError(null);
             await api.post("/auth/request-otp", { email });
             setCooldown(60);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to resend OTP.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to resend OTP.";
+            setError(message);
+            logger.error("Failed to resend OTP:", err);
         }
     };
 

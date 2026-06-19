@@ -1,7 +1,7 @@
 import { IEmailProvider, IOTPProvider, IPaymentProvider, IStorageProvider, IAIProvider } from '../interfaces/providers.interface';
 import { NodemailerProvider } from '../providers/nodemailer.provider';
 import { RedisOTPProvider } from '../providers/redis-otp.provider';
-import { StripeProvider } from '../providers/stripe.provider';
+import { RazorpayProvider } from '../providers/razorpay.provider';
 import { CloudinaryProvider } from '../providers/cloudinary.provider';
 import { OpenAIProvider } from '../providers/openai.provider';
 
@@ -28,7 +28,7 @@ class ServiceFactory {
 
     static getPaymentProvider(): IPaymentProvider {
         if (!this.paymentProvider) {
-            this.paymentProvider = new StripeProvider();
+            this.paymentProvider = new RazorpayProvider();
         }
         return this.paymentProvider;
     }

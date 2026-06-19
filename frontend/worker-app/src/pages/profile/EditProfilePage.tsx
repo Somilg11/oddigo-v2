@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,8 +40,10 @@ export default function EditProfilePage() {
             await api.patch("/users/me", data);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to update profile.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to update profile.";
+            setError(message);
+            logger.error("Failed to update profile:", err);
         }
     };
 

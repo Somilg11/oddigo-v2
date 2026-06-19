@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { useJobStore } from "@/store/job.store";
 import { ArrowLeft, Clock, IndianRupee, Wrench } from "lucide-react";
 import type { SubService } from "@/types";
@@ -14,15 +17,19 @@ export default function ServiceDetailPage() {
     const { setSubService } = useJobStore();
     const [service, setService] = useState<SubService | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchService = async () => {
             try {
                 const response = await api.get(`/services/sub-services/${subServiceId}`);
-                setService(response.data.data);
-                setSubService(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch service detail", error);
+                const data = extractData<SubService>(response);
+                setService(data);
+                setSubService(data);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch service detail", err);
             } finally {
                 setLoading(false);
             }
@@ -36,6 +43,10 @@ export default function ServiceDetailPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     if (!service) {

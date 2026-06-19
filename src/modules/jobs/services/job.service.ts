@@ -366,17 +366,25 @@ export class JobService {
         return job;
     }
 
-    static async processPayment(jobId: string, paymentMethod: string) {
+    static async processPayment(jobId: string, userId: string, paymentMethod: string) {
         const job = await Job.findById(jobId);
         if (!job) throw new AppError('Job not found', 404);
+
+        if (job.customer.toString() !== userId.toString()) {
+            throw new AppError('Only the job owner can make payment', 403);
+        }
 
         if (job.status !== JobStatus.COMPLETED) {
             throw new AppError('Job must be completed before payment', 400);
         }
 
+        if (job.paymentStatus === PaymentStatus.COMPLETED) {
+            throw new AppError('Payment already completed for this job', 400);
+        }
+
         const amount = job.finalQuote || job.initialQuote;
 
-        const payment = await ServiceFactory.getPaymentProvider().createPaymentIntent(
+        const paymentIntent = await ServiceFactory.getPaymentProvider().createPaymentIntent(
             amount,
             'inr',
             {
@@ -387,20 +395,56 @@ export class JobService {
         );
 
         job.paymentMethod = paymentMethod as PaymentMethod;
-        job.paymentStatus = PaymentStatus.COMPLETED;
-        job.transactionId = payment.id;
+        job.paymentStatus = PaymentStatus.PROCESSING;
+        job.transactionId = paymentIntent.id;
         await job.save();
 
-        Logger.info(`Payment processed for job ${jobId}: ₹${amount} via ${paymentMethod}`);
-        return { job, paymentIntent: payment };
+        Logger.info(`Payment order created for job ${jobId}: ₹${amount} via ${paymentMethod} (order: ${paymentIntent.id})`);
+        return { job, paymentIntent };
     }
 
-    static async refundJob(jobId: string, reason: string) {
+    static async confirmPayment(jobId: string, razorpayOrderId: string, razorpayPaymentId: string, razorpaySignature: string) {
+        const job = await Job.findById(jobId);
+        if (!job) throw new AppError('Job not found', 404);
+
+        if (job.transactionId !== razorpayOrderId) {
+            throw new AppError('Order ID mismatch', 400);
+        }
+
+        if (job.paymentStatus === PaymentStatus.COMPLETED) {
+            return { job, alreadyConfirmed: true };
+        }
+
+        const isValid = await ServiceFactory.getPaymentProvider().verifyPayment(
+            razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature
+        );
+
+        if (!isValid) {
+            job.paymentStatus = PaymentStatus.FAILED;
+            await job.save();
+            throw new AppError('Payment verification failed', 400);
+        }
+
+        job.paymentStatus = PaymentStatus.COMPLETED;
+        job.transactionId = razorpayPaymentId;
+        await job.save();
+
+        Logger.info(`Payment confirmed for job ${jobId}: ${razorpayPaymentId}`);
+        return { job, alreadyConfirmed: false };
+    }
+
+    static async refundJob(jobId: string, reason: string, adminId: string) {
         const job = await Job.findById(jobId);
         if (!job) throw new AppError('Job not found', 404);
 
         if (!job.transactionId) {
             throw new AppError('No transaction to refund', 400);
+        }
+
+        if (job.paymentStatus === PaymentStatus.REFUNDED) {
+            throw new AppError('Already refunded', 400);
         }
 
         const amount = job.finalQuote || job.initialQuote;
@@ -411,7 +455,7 @@ export class JobService {
         job.status = JobStatus.CANCELLED;
         await job.save();
 
-        Logger.info(`Refund processed for job ${jobId}: ₹${amount}. Reason: ${reason}`);
+        Logger.info(`Refund processed for job ${jobId}: ₹${amount}. Reason: ${reason}. By: ${adminId}`);
         return job;
     }
 

@@ -206,28 +206,28 @@ Complete feature list for implementation, organized by priority and module.
 - [x] Add real-time operations dashboard (GET /api/admin/operations/live)
 - [x] Add complaint management endpoints
 - [x] Add bulk worker verification
-- [ ] Build Admin Dashboard frontend (React) - FRONTEND TASK
-- [ ] Add live worker map (GeoJSON visualization) - FRONTEND TASK
+- [x] Build Admin Dashboard frontend (React) - COMPLETE
+- [x] Add live worker map (GeoJSON visualization) - Via socket tracking
 
 ---
 
 ## 11. Frontend Fixes (OUT OF SCOPE - Frontend Tasks)
 
 ### 11.1 API URL Mismatch
-- [ ] Fix API base URL in frontend axios config
+- [x] Fix API base URL - env-based VITE_API_BASE_URL
 
 ### 11.2 Service Selection UI
-- [ ] Replace hardcoded service list with API-fetched categories
+- [x] Service categories fetched from GET /api/services/categories
 
 ### 11.3 Worker App
-- [ ] Add job request view with accept/reject
-- [ ] Add OTP entry screen
-- [ ] Add before/after photo upload
+- [x] JobRequestsPage with accept/reject
+- [x] OTPRequestPage + OTPEntryPage
+- [x] BeforePhotoPage + AfterPhotoPage with Cloudinary
 
 ### 11.4 Admin Dashboard
-- [ ] Build live operations dashboard
-- [ ] Build worker verification panel
-- [ ] Build complaint management panel
+- [x] LiveOpsPage with 30s auto-refresh
+- [x] PendingVerificationPage + WorkerDetailPage
+- [x] ComplaintsListPage + ComplaintDetailPage with resolve
 
 ---
 
@@ -371,9 +371,9 @@ Complete feature list for implementation, organized by priority and module.
 3. ✅ Add City Manager role and module
 4. ✅ Add Zone model with geo boundaries
 
-### Phase 5 (Admin & Frontend) ⚠️ PARTIAL
+### Phase 5 (Admin & Frontend) ✅ COMPLETE
 1. ✅ Backend admin endpoints complete
-2. ⬜ Build Admin Dashboard frontend (React) - FRONTEND
+2. ✅ Build Admin Dashboard frontend (React)
 3. ✅ Complaint management backend
 4. ✅ Worker verification backend
 
@@ -383,3 +383,15 @@ Complete feature list for implementation, organized by priority and module.
 3. ✅ Marketing campaigns
 4. ✅ BullMQ email queue integration
 5. ✅ Real-time analytics
+
+### Phase 7 (Frontend Production Hardening) ✅ COMPLETE
+1. ✅ Global ErrorBoundary component in all apps
+2. ✅ Production-safe logger utility (dev-only console output)
+3. ✅ Safe API response extraction with null guards (extractData, extractList)
+4. ✅ PageError component with retry on every data-fetching page
+5. ✅ Removed all console.* statements from production code
+6. ✅ Replaced `any` types with proper `unknown` catch blocks
+7. ✅ WebSocket integration with useSocket hooks (user-app + worker-app)
+8. ✅ Real-time worker location tracking
+9. ✅ Fixed localStorage key bug in worker-app auth store
+10. ✅ Admin detail pages fetch by ID directly (not client-side filtering)

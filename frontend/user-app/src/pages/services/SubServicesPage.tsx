@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { useJobStore } from "@/store/job.store";
 import { ArrowLeft, Clock, IndianRupee } from "lucide-react";
 import type { SubService } from "@/types";
@@ -14,14 +17,17 @@ export default function SubServicesPage() {
     const setSubService = useJobStore((s) => s.setSubService);
     const [subServices, setSubServices] = useState<SubService[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchSubServices = async () => {
             try {
                 const response = await api.get(`/services/sub-services?categoryId=${categoryId}`);
-                setSubServices(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch sub-services", error);
+                setSubServices(extractData(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch sub-services", err);
             } finally {
                 setLoading(false);
             }
@@ -40,6 +46,10 @@ export default function SubServicesPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     return (

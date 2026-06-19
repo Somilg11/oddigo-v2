@@ -1,5 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,22 +17,26 @@ export default function ComplaintDetailPage() {
     const navigate = useNavigate();
     const [complaint, setComplaint] = useState<Complaint | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [resolution, setResolution] = useState("");
     const [refundAmount, setRefundAmount] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
+    const fetchComplaint = async () => {
+        try {
+            setError(null);
+            const response = await api.get(`/admin/complaints/${id}`);
+            setComplaint(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch complaint";
+            setError(message);
+            logger.error("Failed to fetch complaint:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchComplaint = async () => {
-            try {
-                const response = await api.get(`/admin/complaints`);
-                const all = response.data.data.items || response.data.data || [];
-                setComplaint(all.find((c: Complaint) => c._id === id) || null);
-            } catch (error) {
-                console.error("Failed to fetch complaint", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         if (id) fetchComplaint();
     }, [id]);
 
@@ -42,8 +49,10 @@ export default function ComplaintDetailPage() {
                 refundAmount: refundAmount ? Number(refundAmount) : undefined,
             });
             navigate("/complaints");
-        } catch (error) {
-            console.error("Failed to resolve complaint", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to resolve complaint";
+            setError(message);
+            logger.error("Failed to resolve complaint:", err);
         } finally {
             setSubmitting(false);
         }
@@ -55,6 +64,10 @@ export default function ComplaintDetailPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchComplaint} />;
     }
 
     if (!complaint) {

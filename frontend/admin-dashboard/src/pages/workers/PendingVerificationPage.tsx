@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -12,19 +15,25 @@ export default function PendingVerificationPage() {
     const navigate = useNavigate();
     const [workers, setWorkers] = useState<WorkerProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+
+    const fetchPending = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/workers/pending-verification");
+            const all = extractList<WorkerProfile>(response);
+            setWorkers(all.filter((w: WorkerProfile) => w.verificationStatus === "PENDING"));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch pending workers";
+            setError(message);
+            logger.error("Failed to fetch pending workers:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchPending = async () => {
-            try {
-                const response = await api.get("/admin/workers/pending-verification");
-                const all = response.data.data.items || response.data.data || [];
-                setWorkers(all.filter((w: WorkerProfile) => w.verificationStatus === "PENDING"));
-            } catch (error) {
-                console.error("Failed to fetch pending workers", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchPending();
     }, []);
 
@@ -34,8 +43,12 @@ export default function PendingVerificationPage() {
         try {
             await api.post("/admin/workers/bulk-verify", { documentIds: docIds, status });
             setWorkers([]);
-        } catch (error) {
-            console.error("Failed to bulk verify", error);
+            const action = status === "VERIFIED" ? "approved" : "rejected";
+            setSuccess(`Successfully ${action} all workers`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to bulk verify";
+            setError(message);
+            logger.error("Failed to bulk verify:", err);
         }
     };
 
@@ -45,6 +58,10 @@ export default function PendingVerificationPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchPending} />;
     }
 
     return (
@@ -63,7 +80,13 @@ export default function PendingVerificationPage() {
                 )}
             </div>
 
-            {workers.length === 0 ? (
+            {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
+                    {success}
+                </div>
+            )}
+
+            {workers.length === 0 && !success ? (
                 <EmptyState
                     title="No pending verifications"
                     description="All worker KYC documents have been reviewed."

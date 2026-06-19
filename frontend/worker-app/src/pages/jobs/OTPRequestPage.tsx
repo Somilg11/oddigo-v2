@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -20,8 +21,10 @@ export default function OTPRequestPage() {
         try {
             await api.post(`/jobs/${id}/request-otp`);
             setSent(true);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to request OTP.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to request OTP.";
+            setError(message);
+            logger.error("Failed to request OTP:", err);
         } finally {
             setLoading(false);
         }

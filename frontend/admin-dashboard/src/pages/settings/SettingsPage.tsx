@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -15,20 +18,26 @@ interface HealthStatus {
 export default function SettingsPage() {
     const [health, setHealth] = useState<HealthStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const [maintenance, setMaintenance] = useState({ app: "user-app", enabled: false });
     const [toggling, setToggling] = useState(false);
 
+    const fetchHealth = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/health");
+            setHealth(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch health";
+            setError(message);
+            logger.error("Failed to fetch health:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchHealth = async () => {
-            try {
-                const response = await api.get("/admin/health");
-                setHealth(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch health", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchHealth();
     }, []);
 
@@ -37,8 +46,12 @@ export default function SettingsPage() {
         try {
             await api.post("/admin/maintenance", { app, enabled });
             setMaintenance({ app, enabled });
-        } catch (error) {
-            console.error("Failed to toggle maintenance", error);
+            const action = enabled ? "enabled" : "disabled";
+            setSuccess(`Maintenance mode ${action} for ${app}`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to toggle maintenance";
+            setError(message);
+            logger.error("Failed to toggle maintenance:", err);
         } finally {
             setToggling(false);
         }
@@ -52,9 +65,19 @@ export default function SettingsPage() {
         );
     }
 
+    if (error) {
+        return <PageError message={error} onRetry={fetchHealth} />;
+    }
+
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Settings</h1>
+
+            {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
+                    {success}
+                </div>
+            )}
 
             <Card>
                 <CardHeader>

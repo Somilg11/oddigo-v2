@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
@@ -27,9 +28,11 @@ export default function PaymentPage() {
         try {
             await api.post(`/jobs/${id}/pay`, { paymentMethod: selected });
             navigate(`/job/${id}/rate`);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Payment failed.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Payment failed.";
+            setError(message);
             setLoading(false);
+            logger.error("Payment failed", err);
         }
     };
 

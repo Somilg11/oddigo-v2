@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Users, Briefcase, DollarSign, AlertTriangle, Activity } from "lucide-react";
@@ -8,18 +11,23 @@ import type { DashboardStats } from "@/types";
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchStats = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/analytics");
+            setStats(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch dashboard stats";
+            setError(message);
+            logger.error("Failed to fetch dashboard stats:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const response = await api.get("/admin/analytics");
-                setStats(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch dashboard stats", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchStats();
     }, []);
 
@@ -29,6 +37,10 @@ export default function DashboardPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchStats} />;
     }
 
     const cards = [

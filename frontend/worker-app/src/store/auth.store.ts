@@ -27,8 +27,8 @@ export const useAuthStore = create<AuthState>()(
                 })),
             logout: () => {
                 set({ worker: null, token: null });
-                localStorage.removeItem('oddigo_worker_token');
-                localStorage.removeItem('oddigo_worker');
+                localStorage.removeItem("oddigo_worker_token");
+                localStorage.removeItem("oddigo_worker_auth");
             },
         }),
         {

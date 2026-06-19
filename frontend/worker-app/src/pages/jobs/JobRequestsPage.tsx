@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MapPin, Clock, IndianRupee } from "lucide-react";
 import type { Job } from "@/types";
@@ -12,29 +15,37 @@ export default function JobRequestsPage() {
     const navigate = useNavigate();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchRequests = async () => {
-            try {
-                const response = await api.get("/jobs/history");
-                const allJobs = response.data.data.items || response.data.data || [];
-                setJobs(allJobs.filter((j: Job) => j.status === "MATCHING" || j.status === "CREATED"));
-            } catch (error) {
-                console.error("Failed to fetch job requests", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchRequests();
     }, []);
+
+    const fetchRequests = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get("/jobs/history");
+            const allJobs = extractList<Job>(response);
+            setJobs(allJobs.filter((j: Job) => j.status === "MATCHING" || j.status === "CREATED"));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch job requests:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleAccept = async (jobId: string) => {
         try {
             await api.post(`/jobs/${jobId}/accept`);
             setJobs((prev) => prev.filter((j) => j._id !== jobId));
             navigate(`/jobs/${jobId}/active`);
-        } catch (error) {
-            console.error("Failed to accept job", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to accept job:", err);
         }
     };
 
@@ -44,6 +55,10 @@ export default function JobRequestsPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchRequests} />;
     }
 
     return (

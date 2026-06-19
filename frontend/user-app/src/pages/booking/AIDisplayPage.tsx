@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import type { Job } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -36,11 +39,13 @@ export default function AIDisplayPage() {
                     voiceNote: voiceNote || undefined,
                     customIssue: customIssue || undefined,
                 });
-                const job = response.data.data;
+                const job = extractData<Job>(response);
                 setCreatedJob(job);
                 setAnalysis(job.aiAnalysis || null);
-            } catch (err: any) {
-                setError(err.response?.data?.message || "Failed to analyze issue. Please try again.");
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to analyze issue. Please try again.";
+                setError(message);
+                logger.error("Failed to create job and analyze issue", err);
             } finally {
                 setLoading(false);
             }

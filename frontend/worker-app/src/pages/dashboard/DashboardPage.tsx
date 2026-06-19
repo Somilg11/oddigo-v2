@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/auth.store";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { Wifi, WifiOff, CheckCircle, DollarSign, Clock, Briefcase } from "lucide-react";
 
 interface WorkerStats {
@@ -21,15 +24,18 @@ export default function DashboardPage() {
     const navigate = useNavigate();
     const [stats, setStats] = useState<WorkerStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [toggling, setToggling] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 const response = await api.get("/workers/stats");
-                setStats(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch stats", error);
+                setStats(extractData(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "An error occurred";
+                setError(message);
+                logger.error("Failed to fetch stats:", err);
             } finally {
                 setLoading(false);
             }
@@ -37,14 +43,31 @@ export default function DashboardPage() {
         fetchStats();
     }, []);
 
+    const fetchStats = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get("/workers/stats");
+            setStats(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch stats:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const toggleAvailability = async () => {
         try {
             setToggling(true);
             const newStatus = !worker?.isOnline;
             await api.post("/workers/availability", { isOnline: newStatus });
             setAvailability(newStatus);
-        } catch (error) {
-            console.error("Failed to toggle availability", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to toggle availability:", err);
         } finally {
             setToggling(false);
         }
@@ -58,6 +81,10 @@ export default function DashboardPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); fetchStats(); }} />;
     }
 
     return (

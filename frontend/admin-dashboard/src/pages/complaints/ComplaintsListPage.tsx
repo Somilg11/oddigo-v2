@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -20,21 +23,26 @@ export default function ComplaintsListPage() {
     const navigate = useNavigate();
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<string>("");
 
+    const fetchComplaints = async () => {
+        try {
+            setError(null);
+            const params = new URLSearchParams();
+            if (filter) params.set("status", filter);
+            const response = await api.get(`/admin/complaints?${params.toString()}`);
+            setComplaints(extractList(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch complaints";
+            setError(message);
+            logger.error("Failed to fetch complaints:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchComplaints = async () => {
-            try {
-                const params = new URLSearchParams();
-                if (filter) params.set("status", filter);
-                const response = await api.get(`/admin/complaints?${params.toString()}`);
-                setComplaints(response.data.data.items || response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch complaints", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchComplaints();
     }, [filter]);
 
@@ -44,6 +52,10 @@ export default function ComplaintsListPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchComplaints} />;
     }
 
     return (

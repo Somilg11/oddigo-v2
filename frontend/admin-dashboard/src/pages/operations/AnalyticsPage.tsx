@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { BarChart3, TrendingUp, DollarSign, Star } from "lucide-react";
@@ -17,18 +20,23 @@ interface AnalyticsData {
 export default function AnalyticsPage() {
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchAnalytics = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/analytics");
+            setData(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch analytics";
+            setError(message);
+            logger.error("Failed to fetch analytics:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchAnalytics = async () => {
-            try {
-                const response = await api.get("/admin/analytics");
-                setData(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch analytics", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchAnalytics();
     }, []);
 
@@ -38,6 +46,10 @@ export default function AnalyticsPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchAnalytics} />;
     }
 
     return (

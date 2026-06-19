@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,8 +29,10 @@ export default function WarrantyClaimPage() {
                 Array.from(files).map((file) => uploadToCloudinary(file, "oddigo/warranty"))
             );
             setPhotos((prev) => [...prev, ...results.map((r) => r.secure_url)]);
-        } catch (err) {
-            console.error("Upload failed", err);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Upload failed";
+            setError(message);
+            logger.error("Warranty photo upload failed", err);
         } finally {
             setUploading(false);
         }
@@ -51,9 +54,11 @@ export default function WarrantyClaimPage() {
                 photos,
             });
             setSuccess(true);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to submit claim.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to submit claim.";
+            setError(message);
             setLoading(false);
+            logger.error("Failed to submit warranty claim", err);
         }
     };
 

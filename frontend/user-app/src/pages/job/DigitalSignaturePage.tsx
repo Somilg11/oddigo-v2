@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -43,9 +44,11 @@ export default function DigitalSignaturePage() {
             const signatureData = padRef.current.toDataURL();
             await api.post(`/jobs/${id}/signature`, { signatureData });
             navigate(`/job/${id}/pay`);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to submit signature.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to submit signature.";
+            setError(message);
             setLoading(false);
+            logger.error("Failed to submit signature", err);
         }
     };
 

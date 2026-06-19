@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { ArrowLeft, Shield } from "lucide-react";
 import type { Warranty } from "@/types";
 
@@ -12,14 +15,17 @@ export default function WarrantyStatusPage() {
     const navigate = useNavigate();
     const [warranty, setWarranty] = useState<Warranty | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchWarranty = async () => {
             try {
                 const response = await api.get(`/warranty/${jobId}/status`);
-                setWarranty(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch warranty", error);
+                setWarranty(extractData(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch warranty", err);
             } finally {
                 setLoading(false);
             }
@@ -33,6 +39,10 @@ export default function WarrantyStatusPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     if (!warranty) {

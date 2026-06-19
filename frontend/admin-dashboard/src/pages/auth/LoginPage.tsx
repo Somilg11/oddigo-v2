@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +32,13 @@ export default function LoginPage() {
         try {
             setError(null);
             const response = await api.post("/auth/login", data);
-            const { user, accessToken } = response.data.data;
-            setAuth(user, accessToken);
+            const result = extractData(response) as { user: any; accessToken: string };
+            setAuth(result.user, result.accessToken);
             navigate("/");
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Login failed. Please try again.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Login failed. Please try again.";
+            setError(message);
+            logger.error("Login failed:", err);
         }
     };
 

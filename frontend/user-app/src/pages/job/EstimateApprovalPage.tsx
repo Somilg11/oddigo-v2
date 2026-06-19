@@ -1,5 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -19,9 +21,11 @@ export default function EstimateApprovalPage() {
         const fetchJob = async () => {
             try {
                 const response = await api.get(`/jobs/${id}`);
-                setJob(response.data.data);
-            } catch (err: any) {
-                setError(err.response?.data?.message || "Failed to load job details.");
+                setJob(extractData(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load job details.";
+                setError(message);
+                logger.error("Failed to fetch job", err);
             } finally {
                 setLoading(false);
             }
@@ -40,8 +44,9 @@ export default function EstimateApprovalPage() {
             } else {
                 navigate("/");
             }
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to submit response.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to submit response.";
+            setError(message);
             setSubmitting(false);
         }
     };

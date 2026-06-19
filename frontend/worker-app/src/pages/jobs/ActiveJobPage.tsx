@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { PageError } from "@/components/common/PageError";
+import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2, Navigation } from "lucide-react";
+import { useWorkerSocket, useLocationUpdates } from "@/hooks/useSocket";
 import type { Job, JobStatus } from "@/types";
 
 const statusSteps: { status: JobStatus; label: string }[] = [
@@ -21,31 +25,30 @@ export default function ActiveJobPage() {
     const navigate = useNavigate();
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchJob = async () => {
-            try {
-                const response = await api.get(`/jobs/${id}`);
-                setJob(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch job", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        if (id) fetchJob();
+    const fetchJob = useCallback(async () => {
+        if (!id) return;
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get(`/jobs/${id}`);
+            setJob(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch job:", err);
+        } finally {
+            setLoading(false);
+        }
     }, [id]);
 
     useEffect(() => {
-        if (!job || job.status === "COMPLETED" || job.status === "CANCELLED") return;
-        const interval = setInterval(async () => {
-            try {
-                const response = await api.get(`/jobs/${id}`);
-                setJob(response.data.data);
-            } catch {}
-        }, 10000);
-        return () => clearInterval(interval);
-    }, [job, id]);
+        fetchJob();
+    }, [fetchJob]);
+
+    useWorkerSocket();
+    useLocationUpdates(id || null);
 
     const getStepIndex = (status: JobStatus) => statusSteps.findIndex((s) => s.status === status);
 
@@ -55,6 +58,10 @@ export default function ActiveJobPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchJob} />;
     }
 
     if (!job) {
@@ -75,6 +82,15 @@ export default function ActiveJobPage() {
 
             <h1 className="text-2xl font-bold mb-2">Active Job</h1>
             <p className="text-gray-500 mb-6">{job.subServiceName || job.serviceType}</p>
+
+            {job.status !== "COMPLETED" && job.status !== "CANCELLED" && (
+                <Card className="mb-4 border-green-200 bg-green-50">
+                    <CardContent className="p-3 flex items-center gap-2">
+                        <Navigation className="h-4 w-4 text-green-600 animate-pulse" />
+                        <p className="text-sm text-green-700">Location is being shared with the customer</p>
+                    </CardContent>
+                </Card>
+            )}
 
             <Card className="mb-6">
                 <CardHeader>

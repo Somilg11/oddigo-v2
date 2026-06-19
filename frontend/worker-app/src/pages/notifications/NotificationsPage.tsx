@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ArrowLeft, Bell, Check } from "lucide-react";
 import type { Notification } from "@/types";
@@ -12,20 +15,26 @@ export default function NotificationsPage() {
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const response = await api.get("/notifications");
-                setNotifications(response.data.data.items || response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch notifications", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchNotifications();
     }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get("/notifications");
+            setNotifications(extractList(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch notifications:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const markAsRead = async (id: string) => {
         try {
@@ -42,6 +51,10 @@ export default function NotificationsPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchNotifications} />;
     }
 
     return (

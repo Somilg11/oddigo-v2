@@ -5,6 +5,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import type { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,12 +32,14 @@ export default function LoginPage() {
         try {
             setError(null);
             const response = await api.post("/auth/login", data);
-            const { user, accessToken, refreshToken } = response.data.data;
+            const { user, accessToken, refreshToken } = extractData<{ user: User; accessToken: string; refreshToken: string }>(response);
             setAuth(user, accessToken);
             localStorage.setItem("oddigo_refresh_token", refreshToken);
             navigate("/");
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Login failed. Please try again.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Login failed. Please try again.";
+            setError(message);
+            logger.error("Login failed", err);
         }
     };
 

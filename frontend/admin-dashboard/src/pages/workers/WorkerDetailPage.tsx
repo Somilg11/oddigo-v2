@@ -1,5 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -13,19 +16,23 @@ export default function WorkerDetailPage() {
     const [worker, setWorker] = useState<WorkerProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchWorker = async () => {
+        try {
+            setError(null);
+            const response = await api.get(`/admin/workers/${id}`);
+            setWorker(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch worker";
+            setError(message);
+            logger.error("Failed to fetch worker:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchWorker = async () => {
-            try {
-                const response = await api.get(`/admin/workers/pending-verification`);
-                const workers = response.data.data.items || response.data.data || [];
-                setWorker(workers.find((w: WorkerProfile) => w._id === id) || null);
-            } catch (error) {
-                console.error("Failed to fetch worker", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         if (id) fetchWorker();
     }, [id]);
 
@@ -35,8 +42,10 @@ export default function WorkerDetailPage() {
         try {
             await api.post("/admin/verify-worker", { workerId: id, status });
             navigate("/workers");
-        } catch (error) {
-            console.error("Failed to verify worker", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to verify worker";
+            setError(message);
+            logger.error("Failed to verify worker:", err);
         } finally {
             setActionLoading(false);
         }
@@ -48,6 +57,10 @@ export default function WorkerDetailPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchWorker} />;
     }
 
     if (!worker) {

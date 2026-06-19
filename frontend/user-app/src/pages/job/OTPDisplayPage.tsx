@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { ArrowLeft, Copy, Check } from "lucide-react";
 
 export default function OTPDisplayPage() {
@@ -12,15 +15,18 @@ export default function OTPDisplayPage() {
     const [otp, setOtp] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOtp = async () => {
             try {
                 const response = await api.get(`/jobs/${id}`);
-                const job = response.data.data;
+                const job = extractData<{ otp: string }>(response);
                 setOtp(job?.otp || null);
-            } catch (error) {
-                console.error("Failed to fetch OTP", error);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch OTP", err);
             } finally {
                 setLoading(false);
             }
@@ -42,6 +48,10 @@ export default function OTPDisplayPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     return (

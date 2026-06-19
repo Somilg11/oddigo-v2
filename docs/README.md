@@ -30,6 +30,19 @@
 - **[Data Flow Diagrams](../docs_detailed_flows/DATA_FLOW_DIAGRAMS.md)**
 - **[Combined App Flow (End-to-End)](../docs_detailed_flows/COMBINED_APP_FLOW.md)**
 
+## Frontend Applications
+
+Three separate Vite + React applications:
+
+- **[Frontend Implementation Plan](./FRONTEND.md)** - Complete phase-by-phase guide
+- **[Frontend Architecture](./FRONTEND_ARCHITECTURE.md)** - Shared patterns, components, and utilities
+
+| App | Port | Purpose |
+|-----|------|---------|
+| `frontend/user-app` | 5173 | Customer mobile app |
+| `frontend/worker-app` | 5174 | Worker mobile app |
+| `frontend/admin-dashboard` | 5175 | Admin web dashboard |
+
 ## Architecture & Services
 
 The backend uses a hexagonal/adapter architecture for external services to ensure provider agnostic logic.
@@ -37,7 +50,7 @@ The backend uses a hexagonal/adapter architecture for external services to ensur
 ### Providers
 | Service | Current Provider | Interface |
 |---|---|---|
-| **Payment** | Stripe | `IPaymentProvider` |
+| **Payment** | Razorpay | `IPaymentProvider` |
 | **Email** | Nodemailer (SMTP) | `IEmailProvider` |
 | **OTP** | Redis + Email | `IOTPProvider` |
 

@@ -31,6 +31,7 @@ router.patch('/:id/amendment', JobController.respondToAmendment);
 router.patch('/:id/final-approval', JobController.approveFinalPrice);
 router.post('/:id/signature', JobController.submitDigitalSignature);
 router.post('/:id/pay', JobController.processPayment);
+router.post('/:id/pay/confirm', JobController.confirmPayment);
 router.post('/:id/refund', JobController.refundJob);
 
 export default router;

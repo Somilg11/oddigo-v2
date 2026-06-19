@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { useJobStore } from "@/store/job.store";
 import type { ServiceCategory } from "@/types";
 
@@ -11,14 +14,17 @@ export default function ServiceCategoriesPage() {
     const setCategory = useJobStore((s) => s.setCategory);
     const [categories, setCategories] = useState<ServiceCategory[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 const response = await api.get("/services/categories");
-                setCategories(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch categories", error);
+                setCategories(extractData(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch categories", err);
             } finally {
                 setLoading(false);
             }
@@ -37,6 +43,10 @@ export default function ServiceCategoriesPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     return (

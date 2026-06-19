@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { useActiveJobSocket, useWorkerTracking } from "@/hooks/useSocket";
 import type { Job, JobStatus } from "@/types";
 
 const statusSteps: { status: JobStatus; label: string }[] = [
@@ -22,31 +26,33 @@ export default function ActiveJobPage() {
     const navigate = useNavigate();
     const [job, setJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [workerLocation, setWorkerLocation] = useState<{ lat: number; long: number } | null>(null);
 
-    useEffect(() => {
-        const fetchJob = async () => {
-            try {
-                const response = await api.get(`/jobs/${id}`);
-                setJob(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch job", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        if (id) fetchJob();
+    const fetchJob = useCallback(async () => {
+        if (!id) return;
+        try {
+            const response = await api.get(`/jobs/${id}`);
+            setJob(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to load data";
+            setError(message);
+            logger.error("Failed to fetch job", err);
+        } finally {
+            setLoading(false);
+        }
     }, [id]);
 
     useEffect(() => {
-        if (!job || job.status === "COMPLETED" || job.status === "CANCELLED") return;
-        const interval = setInterval(async () => {
-            try {
-                const response = await api.get(`/jobs/${id}`);
-                setJob(response.data.data);
-            } catch {}
-        }, 10000);
-        return () => clearInterval(interval);
-    }, [job, id]);
+        fetchJob();
+    }, [fetchJob]);
+
+    const handleWorkerLocation = useCallback((location: { lat: number; long: number }) => {
+        setWorkerLocation(location);
+    }, []);
+
+    useActiveJobSocket(id || null);
+    useWorkerTracking(id || null, handleWorkerLocation);
 
     const getStepIndex = (status: JobStatus) => statusSteps.findIndex((s) => s.status === status);
 
@@ -56,6 +62,10 @@ export default function ActiveJobPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchJob} />;
     }
 
     if (!job) {
@@ -104,6 +114,25 @@ export default function ActiveJobPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {workerLocation && (job.status === "IN_PROGRESS" || job.status === "OTP_PENDING") && (
+                <Card className="mb-6">
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" /> Worker Live Location
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="bg-gray-100 rounded-lg p-4 text-center">
+                            <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">
+                                Lat: {workerLocation.lat.toFixed(4)}, Long: {workerLocation.long.toFixed(4)}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">Live tracking active</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <div className="space-y-4">
                 {job.status === "OTP_PENDING" && (

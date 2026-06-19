@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ArrowLeft, Bell, Check } from "lucide-react";
 import type { Notification } from "@/types";
@@ -12,14 +15,17 @@ export default function NotificationsPage() {
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
                 const response = await api.get("/notifications");
-                setNotifications(response.data.data.items || response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch notifications", error);
+                setNotifications(extractList(response));
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
+                setError(message);
+                logger.error("Failed to fetch notifications", err);
             } finally {
                 setLoading(false);
             }
@@ -33,7 +39,9 @@ export default function NotificationsPage() {
             setNotifications((prev) =>
                 prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
             );
-        } catch {}
+        } catch (err: unknown) {
+            logger.error("Failed to mark notification as read", err);
+        }
     };
 
     if (loading) {
@@ -42,6 +50,10 @@ export default function NotificationsPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
     }
 
     return (

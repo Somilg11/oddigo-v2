@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -12,18 +15,23 @@ export default function WorkersListPage() {
     const navigate = useNavigate();
     const [workers, setWorkers] = useState<WorkerProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchWorkers = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/workers");
+            setWorkers(extractList(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch workers";
+            setError(message);
+            logger.error("Failed to fetch workers:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchWorkers = async () => {
-            try {
-                const response = await api.get("/admin/workers");
-                setWorkers(response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch workers", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchWorkers();
     }, []);
 
@@ -41,6 +49,10 @@ export default function WorkersListPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchWorkers} />;
     }
 
     return (

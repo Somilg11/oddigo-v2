@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Clock, CheckCircle, XCircle, IndianRupee } from "lucide-react";
 import type { Job } from "@/types";
@@ -18,20 +21,26 @@ export default function JobHistoryPage() {
     const navigate = useNavigate();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchJobs = async () => {
-            try {
-                const response = await api.get("/jobs/history");
-                setJobs(response.data.data.items || response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch jobs", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchJobs();
     }, []);
+
+    const fetchJobs = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get("/jobs/history");
+            setJobs(extractList(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch jobs:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -39,6 +48,10 @@ export default function JobHistoryPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchJobs} />;
     }
 
     return (

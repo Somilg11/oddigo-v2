@@ -149,7 +149,22 @@ export class JobController {
     static async processPayment(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { paymentMethod } = req.body;
-            const result = await JobService.processPayment(req.params.id, paymentMethod);
+            const result = await JobService.processPayment(req.params.id, req.user._id, paymentMethod);
+            res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async confirmPayment(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+            const result = await JobService.confirmPayment(
+                req.params.id,
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature
+            );
             res.status(200).json({ success: true, data: result });
         } catch (error) {
             next(error);
@@ -159,7 +174,7 @@ export class JobController {
     static async refundJob(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { reason } = req.body;
-            const job = await JobService.refundJob(req.params.id, reason);
+            const job = await JobService.refundJob(req.params.id, reason, req.user._id);
             res.status(200).json({ success: true, data: job });
         } catch (error) {
             next(error);

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +17,7 @@ export default function IssueUploadPage() {
     const [uploading, setUploading] = useState(false);
     const [recording, setRecording] = useState(false);
     const [voiceNote, setVoiceNote] = useState("");
+    const [error, setError] = useState<string | null>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -30,8 +32,10 @@ export default function IssueUploadPage() {
                 Array.from(files).map((file) => uploadToCloudinary(file, "oddigo/issues"))
             );
             setPhotos((prev) => [...prev, ...results.map((r) => r.secure_url)]);
-        } catch (error) {
-            console.error("Upload failed", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Upload failed";
+            setError(message);
+            logger.error("Photo upload failed", err);
         } finally {
             setUploading(false);
         }
@@ -46,8 +50,10 @@ export default function IssueUploadPage() {
                 Array.from(files).map((file) => uploadToCloudinary(file, "oddigo/issues"))
             );
             setVideos((prev) => [...prev, ...results.map((r) => r.secure_url)]);
-        } catch (error) {
-            console.error("Upload failed", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Upload failed";
+            setError(message);
+            logger.error("Video upload failed", err);
         } finally {
             setUploading(false);
         }
@@ -70,16 +76,20 @@ export default function IssueUploadPage() {
                 try {
                     const result = await uploadToCloudinary(file, "oddigo/voice-notes");
                     setVoiceNote(result.secure_url);
-                } catch (error) {
-                    console.error("Voice note upload failed", error);
+                } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : "Voice note upload failed";
+                    setError(message);
+                    logger.error("Voice note upload failed", err);
                 }
                 stream.getTracks().forEach((t) => t.stop());
             };
 
             mediaRecorder.start();
             setRecording(true);
-        } catch (error) {
-            console.error("Microphone access denied", error);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Microphone access denied";
+            setError(message);
+            logger.error("Microphone access denied", err);
         }
     };
 
@@ -104,6 +114,12 @@ export default function IssueUploadPage() {
 
             <h1 className="text-2xl font-bold mb-2">Describe Your Issue</h1>
             <p className="text-gray-500 mb-6">Upload photos and videos to help us understand the problem.</p>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm mb-4">
+                    {error}
+                </div>
+            )}
 
             <div className="space-y-6">
                 <Card>

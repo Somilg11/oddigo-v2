@@ -6,7 +6,7 @@
 We use a **Factory Pattern** (`ServiceFactory`) to instantiate external providers. This ensures the core logic is agnostic of the specific 3rd party vendor.
 - **Interfaces**: Defined in `src/core/interfaces/providers.interface.ts`.
 - **Implementations**:
-  - `StripeProvider` implements `IPaymentProvider`.
+  - `RazorpayProvider` implements `IPaymentProvider`.
   - `NodemailerProvider` implements `IEmailProvider`.
   - `RedisOTPProvider` implements `IOTPProvider`.
 
@@ -36,5 +36,5 @@ We use a **Factory Pattern** (`ServiceFactory`) to instantiate external provider
 - **Broadcast**: When a job matches, server emits `job:offer` to relevant `userIds` (looked up via matching engine).
 
 ## 4. Admin & Maintenance
-- **Health**: Real-time ping to Stripe/SMTP/Redis.
+- **Health**: Real-time ping to Razorpay/SMTP/Redis.
 - **Maintenance**: A Redis key `maintenance:user_app` = `true` triggers a 503 Service Unavailable in the `maintenanceMiddleware`.

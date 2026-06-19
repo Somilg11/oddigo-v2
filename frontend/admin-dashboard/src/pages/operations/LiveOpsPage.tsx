@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import { PageError } from "@/components/common/PageError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Wifi, WifiOff, Clock, Briefcase, Users } from "lucide-react";
@@ -8,18 +11,23 @@ import type { LiveOperations } from "@/types";
 export default function LiveOpsPage() {
     const [ops, setOps] = useState<LiveOperations | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchOps = async () => {
+        try {
+            setError(null);
+            const response = await api.get("/admin/operations/live");
+            setOps(extractData(response));
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch live operations";
+            setError(message);
+            logger.error("Failed to fetch live operations:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchOps = async () => {
-            try {
-                const response = await api.get("/admin/operations/live");
-                setOps(response.data.data);
-            } catch (error) {
-                console.error("Failed to fetch live operations", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchOps();
         const interval = setInterval(fetchOps, 30000);
         return () => clearInterval(interval);
@@ -31,6 +39,10 @@ export default function LiveOpsPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchOps} />;
     }
 
     return (

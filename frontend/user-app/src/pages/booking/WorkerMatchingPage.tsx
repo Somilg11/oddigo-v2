@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractList } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
+import type { WorkerProfile } from "@/types";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { useJobStore } from "@/store/job.store";
 import { Search } from "lucide-react";
 
@@ -9,6 +13,7 @@ export default function WorkerMatchingPage() {
     const navigate = useNavigate();
     const { createdJob, setMatchedWorkers } = useJobStore();
     const [dots, setDots] = useState("");
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -26,11 +31,13 @@ export default function WorkerMatchingPage() {
         const findWorkers = async () => {
             try {
                 const response = await api.post(`/jobs/${createdJob._id}/find-workers`);
-                const workers = response.data.data.workers || response.data.data || [];
+                const workers = extractList<WorkerProfile>(response);
                 setMatchedWorkers(workers);
                 navigate("/booking/workers");
-            } catch (error) {
-                console.error("Failed to find workers", error);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to find workers";
+                setError(message);
+                logger.error("Failed to find workers", err);
                 navigate("/booking/workers");
             }
         };
@@ -38,6 +45,10 @@ export default function WorkerMatchingPage() {
         const timer = setTimeout(findWorkers, 3000);
         return () => clearTimeout(timer);
     }, [createdJob, navigate, setMatchedWorkers]);
+
+    if (error) {
+        return <PageError message={error} onRetry={() => navigate("/booking/workers")} />;
+    }
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">

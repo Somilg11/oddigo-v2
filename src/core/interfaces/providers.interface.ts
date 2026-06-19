@@ -8,6 +8,7 @@ export interface IServiceHealth {
 export interface IPaymentProvider {
     name: string;
     createPaymentIntent(amount: number, currency: string, metadata?: any): Promise<any>;
+    verifyPayment(orderId: string, paymentId: string, signature: string): Promise<boolean>;
     refundPayment(transactionId: string, amount?: number): Promise<any>;
     checkHealth(): Promise<IServiceHealth>;
 }

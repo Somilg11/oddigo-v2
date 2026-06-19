@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -23,8 +24,10 @@ export default function CompleteJobPage() {
         try {
             const result = await uploadToCloudinary(file, "oddigo/completion-proof");
             setProofUrl(result.secure_url);
-        } catch (err) {
-            console.error("Upload failed", err);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Upload failed";
+            setError(message);
+            logger.error("Upload failed:", err);
         } finally {
             setUploading(false);
         }
@@ -39,8 +42,10 @@ export default function CompleteJobPage() {
                 proofUrl: proofUrl || undefined,
             });
             navigate(`/jobs/${id}/active`);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to complete job.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to complete job.";
+            setError(message);
+            logger.error("Failed to complete job:", err);
             setLoading(false);
         }
     };

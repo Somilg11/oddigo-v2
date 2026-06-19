@@ -18,8 +18,9 @@ export default function JobConfirmationPage() {
         setError(null);
         try {
             navigate(`/job/${createdJob._id}`);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to confirm job.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to confirm job.";
+            setError(message);
             setLoading(false);
         }
     };

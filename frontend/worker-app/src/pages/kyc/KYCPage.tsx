@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { extractData } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { PageError } from "@/components/common/PageError";
 import { ArrowLeft, Upload, CheckCircle, Clock, XCircle } from "lucide-react";
 
 interface KYCDocument {
@@ -24,20 +27,26 @@ export default function KYCPage() {
     const navigate = useNavigate();
     const [documents, setDocuments] = useState<KYCDocument[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchKyc = async () => {
-            try {
-                const response = await api.get("/workers/kyc");
-                setDocuments(response.data.data || []);
-            } catch (error) {
-                console.error("Failed to fetch KYC", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchKyc();
     }, []);
+
+    const fetchKyc = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get("/workers/kyc");
+            setDocuments(extractData(response) || []);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "An error occurred";
+            setError(message);
+            logger.error("Failed to fetch KYC:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -53,6 +62,10 @@ export default function KYCPage() {
                 <LoadingSpinner size="lg" />
             </div>
         );
+    }
+
+    if (error) {
+        return <PageError message={error} onRetry={fetchKyc} />;
     }
 
     return (
