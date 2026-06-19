@@ -50,6 +50,7 @@ export interface ServiceCategory {
     description: string;
     isActive: boolean;
     sortOrder: number;
+    subServiceCount?: number;
     createdAt: string;
     updatedAt: string;
 }

@@ -23,7 +23,6 @@ const RatingSchema: Schema = new Schema({
 });
 
 RatingSchema.index({ worker: 1 });
-RatingSchema.index({ job: 1 }, { unique: true });
 RatingSchema.index({ customer: 1 });
 
 export const Rating = mongoose.model<IRating>('Rating', RatingSchema);

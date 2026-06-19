@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import mongoSanitize from 'express-mongo-sanitize';
+import { mongoSanitizeMiddleware } from './core/middlewares/mongo-sanitize.middleware';
 // xss-clean removed - no types available, using helmet for XSS protection
 import hpp from 'hpp';
 import rateLimit from 'express-rate-limit';
@@ -44,11 +44,11 @@ const paymentLimiter = rateLimit({
 
 app.use('/api', generalLimiter);
 app.use('/api/auth', authLimiter);
-app.use('/api/jobs/*/pay', paymentLimiter);
-app.use('/api/jobs/*/pay/confirm', paymentLimiter);
+app.use('/api/jobs/:jobId/pay', paymentLimiter);
+app.use('/api/jobs/:jobId/pay/confirm', paymentLimiter);
 
 // Data Sanitization
-app.use(mongoSanitize());
+app.use(mongoSanitizeMiddleware());
 app.use(hpp());
 
 // Request Logger

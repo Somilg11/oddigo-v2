@@ -22,7 +22,6 @@ const ServiceCategorySchema: Schema = new Schema({
     timestamps: true
 });
 
-ServiceCategorySchema.index({ slug: 1 });
 ServiceCategorySchema.index({ isActive: 1 });
 
 export const ServiceCategory = mongoose.model<IServiceCategory>('ServiceCategory', ServiceCategorySchema);

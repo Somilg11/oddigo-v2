@@ -2,3 +2,15 @@
 2026-01-25 00:13:18:1318 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::1[39m
 2026-01-24 18:48:11:4811 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::ffff:192.168.65.1[39m
 2026-01-24 18:49:18:4918 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /health - GET - ::ffff:192.168.65.1[39m
+2026-06-20 00:43:41:4341 [31merror[39m: [31mRedis error: [39m
+2026-06-20 00:43:41:4341 [31merror[39m: [31mMongoDB connection error: Authentication failed.[39m
+2026-06-20 00:44:08:448 [31merror[39m: [31mRedis error: [39m
+2026-06-20 00:44:08:448 [31merror[39m: [31mMongoDB connection error: Authentication failed.[39m
+2026-06-20 00:45:17:4517 [31merror[39m: [31mRedis error: [39m
+2026-06-20 00:45:17:4517 [31merror[39m: [31mMongoDB connection error: Authentication failed.[39m
+2026-06-20 00:47:28:4728 [31merror[39m: [31mMongoDB connection error: Authentication failed.[39m
+2026-06-20 00:47:41:4741 [31merror[39m: [31mMongoDB connection error: Authentication failed.[39m
+2026-06-20 00:50:11:5011 [31merror[39m: [31m500 - Cannot set property query of #<IncomingMessage> which has only a getter - /api/auth/signup - POST - ::1[39m
+2026-06-20 01:00:36:036 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
+2026-06-20 01:01:10:110 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
+2026-06-20 01:25:51:2551 [31merror[39m: [31m409 - User with this email or phone already exists - /api/auth/signup - POST - ::1[39m

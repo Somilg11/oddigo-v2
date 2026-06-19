@@ -33,7 +33,6 @@ const SubServiceSchema: Schema = new Schema({
 });
 
 SubServiceSchema.index({ category: 1 });
-SubServiceSchema.index({ slug: 1 });
 SubServiceSchema.index({ isActive: 1 });
 
 export const SubService = mongoose.model<ISubService>('SubService', SubServiceSchema);

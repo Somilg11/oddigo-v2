@@ -34,7 +34,6 @@ const QualityAuditSchema: Schema = new Schema({
     timestamps: true
 });
 
-QualityAuditSchema.index({ job: 1 });
 QualityAuditSchema.index({ fieldExecutive: 1 });
 QualityAuditSchema.index({ status: 1 });
 

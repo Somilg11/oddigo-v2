@@ -6,7 +6,7 @@ import { Logger } from '../config/logger';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:password123@localhost:27017/oddigo?authSource=admin';
+const MONGO_URI = process.env.MONGO_URI!;
 
 interface SubServiceData {
     name: string;

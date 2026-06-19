@@ -12,6 +12,8 @@ import ComplaintsListPage from "./pages/complaints/ComplaintsListPage";
 import ComplaintDetailPage from "./pages/complaints/ComplaintDetailPage";
 import DisputesPage from "./pages/disputes/DisputesPage";
 import SettingsPage from "./pages/settings/SettingsPage";
+import ServicesListPage from "./pages/services/ServicesListPage";
+import CategoryDetailPage from "./pages/services/CategoryDetailPage";
 import { useAuthStore } from "./store/auth.store";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -30,6 +32,8 @@ function App() {
 
                 <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                     <Route path="/" element={<DashboardPage />} />
+                    <Route path="/services" element={<ServicesListPage />} />
+                    <Route path="/services/:categoryId" element={<CategoryDetailPage />} />
                     <Route path="/operations/live" element={<LiveOpsPage />} />
                     <Route path="/analytics" element={<AnalyticsPage />} />
                     <Route path="/workers" element={<WorkersListPage />} />

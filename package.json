@@ -2,10 +2,10 @@
   "name": "oddigo-v2",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node dist/server.js",
-    "dev": "nodemon src/server.ts",
+    "start": "node -r dotenv/config dist/server.js",
+    "dev": "nodemon",
     "build": "tsc",
     "seed": "ts-node src/scripts/seed-services.ts",
     "lint": "eslint src/**/*.ts",

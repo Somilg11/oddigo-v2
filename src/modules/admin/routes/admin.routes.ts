@@ -27,4 +27,15 @@ router.get('/operations/live', AdminController.getLiveOperations);
 router.get('/complaints', AdminController.getComplaints);
 router.post('/complaints/:id/resolve', AdminController.resolveComplaint);
 
+// Service Management
+router.get('/services/categories', AdminController.getAllCategories);
+router.post('/services/categories', AdminController.createCategory);
+router.patch('/services/categories/:id', AdminController.updateCategory);
+router.delete('/services/categories/:id', AdminController.deleteCategory);
+
+router.get('/services/sub-services', AdminController.getAllSubServices);
+router.post('/services/sub-services', AdminController.createSubService);
+router.patch('/services/sub-services/:id', AdminController.updateSubService);
+router.delete('/services/sub-services/:id', AdminController.deleteSubService);
+
 export default router;

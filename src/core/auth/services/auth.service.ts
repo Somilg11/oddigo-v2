@@ -6,7 +6,7 @@ import { AppError } from '../../errors/AppError';
 
 export class AuthService {
 
-    static async signup(userData: Partial<IUser>, passwordRaw: string) {
+    static async signup(userData: Partial<IUser>, passwordRaw: string, serviceType?: string, hourlyRate?: number) {
         // Check if user exists
         const existingUser = await User.findOne({
             $or: [{ email: userData.email }, { phone: userData.phone }]
@@ -25,10 +25,11 @@ export class AuthService {
             password: hashedPassword
         });
 
-        // If Worker, create WorkerProfile
+        // If Worker, create WorkerProfile with skills
         if (newUser.role === UserRole.WORKER) {
             await WorkerProfile.create({
-                user: newUser._id
+                user: newUser._id,
+                skills: serviceType ? [serviceType] : [],
             });
         }
 

@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { Job, JobStatus } from '../../jobs/models/Job';
 import { User } from '../../users/models/User';
 import { WorkerProfile } from '../../workers/models/WorkerProfile';
@@ -9,6 +10,8 @@ import { Complaint, ComplaintStatus } from '../models/Complaint';
 import { AppError } from '../../../core/errors/AppError';
 import { Logger } from '../../../config/logger';
 import { AuthRequest } from '../../../core/middlewares/auth.middleware';
+import { ServiceCategory } from '../../services/models/ServiceCategory';
+import { SubService, PricingType } from '../../services/models/SubService';
 
 export class AdminController {
 
@@ -319,6 +322,209 @@ export class AdminController {
             const { documentIds, status } = req.body;
             const result = await KYCService.bulkVerify(documentIds, req.user._id, status);
             res.status(200).json({ success: true, results: result.length, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Service Category CRUD ────────────────────────────────────
+
+    static async getAllCategories(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const categories = await ServiceCategory.find().sort({ sortOrder: 1, name: 1 });
+
+            const categoriesWithCount = await Promise.all(
+                categories.map(async (cat) => {
+                    const subServiceCount = await SubService.countDocuments({ category: cat._id });
+                    return { ...cat.toObject(), subServiceCount };
+                })
+            );
+
+            res.status(200).json({ success: true, data: categoriesWithCount });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createCategory(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(2),
+                slug: z.string().min(2).regex(/^[a-z0-9-]+$/),
+                icon: z.string().optional().default(''),
+                description: z.string().optional().default(''),
+                isActive: z.boolean().optional().default(true),
+                sortOrder: z.number().optional().default(0),
+            });
+
+            const data = schema.parse(req.body);
+
+            const existing = await ServiceCategory.findOne({ $or: [{ slug: data.slug }, { name: data.name }] });
+            if (existing) throw new AppError('Category with this name or slug already exists', 409);
+
+            const category = await ServiceCategory.create(data);
+            res.status(201).json({ success: true, data: category });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async updateCategory(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(2).optional(),
+                slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
+                icon: z.string().optional(),
+                description: z.string().optional(),
+                isActive: z.boolean().optional(),
+                sortOrder: z.number().optional(),
+            });
+
+            const data = schema.parse(req.body);
+            const category = await ServiceCategory.findById(req.params.id);
+            if (!category) throw new AppError('Category not found', 404);
+
+            if (data.slug || data.name) {
+                const conflict = await ServiceCategory.findOne({
+                    _id: { $ne: category._id },
+                    $or: [
+                        ...(data.slug ? [{ slug: data.slug }] : []),
+                        ...(data.name ? [{ name: data.name }] : []),
+                    ],
+                });
+                if (conflict) throw new AppError('Category with this name or slug already exists', 409);
+            }
+
+            Object.assign(category, data);
+            await category.save();
+            res.status(200).json({ success: true, data: category });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async deleteCategory(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const category = await ServiceCategory.findById(req.params.id);
+            if (!category) throw new AppError('Category not found', 404);
+
+            await SubService.deleteMany({ category: category._id });
+            await category.deleteOne();
+
+            res.status(200).json({ success: true, message: 'Category and its sub-services deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Sub-Service CRUD ─────────────────────────────────────────
+
+    static async getAllSubServices(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { categoryId } = req.query;
+            const filter: Record<string, unknown> = {};
+            if (categoryId) filter.category = categoryId;
+
+            const subServices = await SubService.find(filter)
+                .populate('category', 'name slug icon')
+                .sort({ name: 1 });
+
+            res.status(200).json({ success: true, data: subServices });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createSubService(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(2),
+                slug: z.string().min(2).regex(/^[a-z0-9-]+$/),
+                category: z.string().min(1),
+                description: z.string().optional().default(''),
+                basePrice: z.number().min(0),
+                estimatedTime: z.number().min(1),
+                pricingType: z.nativeEnum(PricingType).default(PricingType.ESTIMATE),
+                isActive: z.boolean().optional().default(true),
+            });
+
+            const data = schema.parse(req.body);
+
+            const categoryExists = await ServiceCategory.findById(data.category);
+            if (!categoryExists) throw new AppError('Category not found', 404);
+
+            const existing = await SubService.findOne({ $or: [{ slug: data.slug }, { name: data.name, category: data.category }] });
+            if (existing) throw new AppError('Sub-service with this name or slug already exists', 409);
+
+            const subService = await SubService.create(data);
+            const populated = await subService.populate('category', 'name slug icon');
+            res.status(201).json({ success: true, data: populated });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async updateSubService(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(2).optional(),
+                slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
+                category: z.string().optional(),
+                description: z.string().optional(),
+                basePrice: z.number().min(0).optional(),
+                estimatedTime: z.number().min(1).optional(),
+                pricingType: z.nativeEnum(PricingType).optional(),
+                isActive: z.boolean().optional(),
+            });
+
+            const data = schema.parse(req.body);
+            const subService = await SubService.findById(req.params.id);
+            if (!subService) throw new AppError('Sub-service not found', 404);
+
+            if (data.category) {
+                const categoryExists = await ServiceCategory.findById(data.category);
+                if (!categoryExists) throw new AppError('Category not found', 404);
+            }
+
+            if (data.slug || data.name) {
+                const conflict = await SubService.findOne({
+                    _id: { $ne: subService._id },
+                    $or: [
+                        ...(data.slug ? [{ slug: data.slug }] : []),
+                        ...(data.name ? [{ name: data.name, category: data.category || subService.category }] : []),
+                    ],
+                });
+                if (conflict) throw new AppError('Sub-service with this name or slug already exists', 409);
+            }
+
+            Object.assign(subService, data);
+            await subService.save();
+            const populated = await subService.populate('category', 'name slug icon');
+            res.status(200).json({ success: true, data: populated });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async deleteSubService(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const subService = await SubService.findById(req.params.id);
+            if (!subService) throw new AppError('Sub-service not found', 404);
+
+            await subService.deleteOne();
+            res.status(200).json({ success: true, message: 'Sub-service deleted' });
         } catch (error) {
             next(error);
         }

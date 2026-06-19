@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase } from "lucide-react";
+import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase, Wrench } from "lucide-react";
 
 const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/services", label: "Services", icon: Wrench },
     { path: "/operations/live", label: "Live Operations", icon: Briefcase },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/workers", label: "Workers", icon: Users },
