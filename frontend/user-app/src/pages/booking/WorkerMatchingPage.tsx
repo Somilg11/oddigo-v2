@@ -58,7 +58,7 @@ export default function WorkerMatchingPage() {
                 </div>
             </div>
             <h2 className="text-xl font-bold mb-2">Finding Workers{dots}</h2>
-            <p className="text-gray-500 text-center max-w-xs">
+            <p className="text-muted-foreground text-center max-w-xs">
                 We're searching for the best available workers near you
             </p>
             <LoadingSpinner size="lg" className="mt-8" />

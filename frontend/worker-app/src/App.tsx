@@ -22,7 +22,9 @@ import ProfilePage from "./pages/profile/ProfilePage";
 import EditProfilePage from "./pages/profile/EditProfilePage";
 import EarningsPage from "./pages/profile/EarningsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import { useAuthStore } from "./store/auth.store";
+import { Toaster } from "sonner";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const token = useAuthStore((state) => state.token);
@@ -35,10 +37,12 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 function App() {
     return (
         <Router>
+            <Toaster position="top-center" richColors />
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/login/otp" element={<OTPLoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
 
                 <Route element={<ProtectedRoute><WorkerLayout /></ProtectedRoute>}>
                     <Route path="/" element={<DashboardPage />} />

@@ -1,5 +1,9 @@
 export type UserRole = 'CUSTOMER' | 'WORKER' | 'ADMIN' | 'FIELD_EXECUTIVE' | 'ZONE_MANAGER' | 'CITY_MANAGER';
 
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+
+export type AddressLabel = 'HOME' | 'WORK' | 'OTHER';
+
 export interface User {
     _id: string;
     name: string;
@@ -7,19 +11,27 @@ export interface User {
     phone: string;
     role: UserRole;
     avatarUrl?: string;
+    gender?: Gender;
+    dateOfBirth?: string;
     creditStatus?: 'GREEN' | 'RED';
     monthlyJobsCount?: number;
     isActive: boolean;
     addresses?: Address[];
+    referralCode?: string;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface Address {
+    _id?: string;
+    label: AddressLabel;
     street: string;
     city: string;
-    zip: string;
-    coordinates: [number, number];
+    state: string;
+    pincode: string;
+    landmark?: string;
+    coordinates?: [number, number];
+    isDefault?: boolean;
 }
 
 export interface WorkerProfile {
@@ -141,6 +153,8 @@ export interface Job {
     paymentStatus?: PaymentStatus;
     transactionId?: string;
     warrantyId?: string;
+    couponCode?: string;
+    discount?: number;
     scheduledAt: string;
     startedAt?: string;
     workerArrivedAt?: string;
@@ -200,6 +214,23 @@ export interface Notification {
     updatedAt: string;
 }
 
+export type BannerType = 'PROMOTION' | 'ANNOUNCEMENT' | 'COUPON' | 'INFO';
+
+export interface Banner {
+    _id: string;
+    title: string;
+    subtitle?: string;
+    imageUrl?: string;
+    linkUrl?: string;
+    type: BannerType;
+    isActive: boolean;
+    sortOrder: number;
+    startsAt?: string;
+    expiresAt?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface ApiResponse<T> {
     success: boolean;
     message: string;
@@ -216,4 +247,31 @@ export interface PaginatedResponse<T> {
         limit: number;
         pages: number;
     };
+}
+
+export interface UserPoints {
+    _id: string;
+    user: string;
+    balance: number;
+    lifetimeEarned: number;
+    lifetimeRedeemed: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type PointTransactionType = 'EARNED' | 'REDEEMED' | 'EXPIRED' | 'ADJUSTED';
+
+export interface PointTransaction {
+    _id: string;
+    user: string;
+    amount: number;
+    type: PointTransactionType;
+    reference: {
+        model: string;
+        id: string;
+    };
+    description: string;
+    expiresAt?: string;
+    createdAt: string;
+    updatedAt: string;
 }

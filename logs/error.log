@@ -14,3 +14,19 @@
 2026-06-20 01:00:36:036 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
 2026-06-20 01:01:10:110 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
 2026-06-20 01:25:51:2551 [31merror[39m: [31m409 - User with this email or phone already exists - /api/auth/signup - POST - ::1[39m
+2026-06-20 11:48:27:4827 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 11:48:27:4827 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 11:48:29:4829 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:01:33:133 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:01:33:133 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:01:36:136 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:01:36:136 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:01:56:156 [31merror[39m: [31m503 - System is currently under maintenance. Please try again later. - /api/auth/login - POST - ::1[39m
+2026-06-20 12:07:51:751 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:07:51:751 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:10:56:1056 [31merror[39m: [31m503 - System is currently under maintenance. Please try again later. - /api/workers/stats - GET - ::1[39m
+2026-06-20 12:10:56:1056 [31merror[39m: [31m503 - System is currently under maintenance. Please try again later. - /api/workers/stats - GET - ::1[39m
+2026-06-20 12:16:36:1636 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:16:36:1636 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:16:41:1641 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-20 12:16:41:1641 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m

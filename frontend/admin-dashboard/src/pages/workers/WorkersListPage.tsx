@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
-import { extractList } from "@/lib/api-helpers";
+import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Pagination } from "@/components/common/Pagination";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Star, CheckCircle, Clock, XCircle } from "lucide-react";
 import type { WorkerProfile } from "@/types";
@@ -16,12 +17,17 @@ export default function WorkersListPage() {
     const [workers, setWorkers] = useState<WorkerProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, pages: 1 });
 
-    const fetchWorkers = async () => {
+    const fetchWorkers = useCallback(async () => {
         try {
             setError(null);
-            const response = await api.get("/admin/workers");
-            setWorkers(extractList(response));
+            const response = await api.get(`/admin/workers?page=${page}&limit=15`);
+            setWorkers(extractData(response));
+            if (response.data.pagination) {
+                setPagination(response.data.pagination);
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to fetch workers";
             setError(message);
@@ -29,11 +35,11 @@ export default function WorkersListPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page]);
 
     useEffect(() => {
         fetchWorkers();
-    }, []);
+    }, [fetchWorkers]);
 
     const getVerificationBadge = (status: string) => {
         switch (status) {
@@ -76,7 +82,7 @@ export default function WorkersListPage() {
                                     </div>
                                     <div>
                                         <p className="font-medium">{worker.user?.name || "Worker"}</p>
-                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <span className="flex items-center gap-1">
                                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                                 {worker.avgRating?.toFixed(1) || "N/A"}
@@ -94,6 +100,8 @@ export default function WorkersListPage() {
                     ))}
                 </div>
             )}
+
+            <Pagination page={pagination.page} pages={pagination.pages} onPageChange={setPage} />
         </div>
     );
 }

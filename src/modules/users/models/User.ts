@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export enum UserRole {
     CUSTOMER = 'CUSTOMER',
@@ -14,54 +14,77 @@ export enum CreditStatus {
     RED = 'RED'
 }
 
+export enum Gender {
+    MALE = 'MALE',
+    FEMALE = 'FEMALE',
+    OTHER = 'OTHER'
+}
+
+export interface IUserAddress {
+    label: 'HOME' | 'WORK' | 'OTHER';
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    landmark?: string;
+    coordinates?: number[];
+    isDefault?: boolean;
+}
+
 export interface IUser extends Document {
     name: string;
     email: string;
     phone: string;
-    password?: string; // Hashed (optional if using OTP only, but likely needed)
-    role: UserRole; // CUSTOMER, WORKER, ADMIN
+    password?: string;
+    role: UserRole;
     avatarUrl?: string;
-
-    // Customer specific stats
+    gender?: Gender;
+    dateOfBirth?: Date;
     creditStatus?: CreditStatus;
     monthlyJobsCount?: number;
     isActive: boolean;
-    addresses?: { street: string, city: string, zip: string, coordinates: number[] }[];
-
-    // Worker specific references are in WorkerProfile, but we might link them here
-    // OTP / Auth fields
+    addresses?: IUserAddress[];
     refreshToken?: string;
-
+    referralCode?: string;
+    referredBy?: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
+
+const UserAddressSchema = new Schema<IUserAddress>({
+    label: { type: String, enum: ['HOME', 'WORK', 'OTHER'], default: 'HOME' },
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pincode: { type: String, required: true },
+    landmark: { type: String },
+    coordinates: [Number],
+    isDefault: { type: Boolean, default: false },
+}, { _id: true });
 
 const UserSchema: Schema = new Schema({
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, required: true, unique: true, trim: true },
-    password: { type: String, select: false }, // Store hashed password
+    password: { type: String, select: false },
     role: { type: String, enum: Object.values(UserRole), default: UserRole.CUSTOMER },
     avatarUrl: { type: String },
+    gender: { type: String, enum: Object.values(Gender) },
+    dateOfBirth: { type: Date },
 
     creditStatus: { type: String, enum: Object.values(CreditStatus), default: CreditStatus.GREEN },
     monthlyJobsCount: { type: Number, default: 0 },
 
     isActive: { type: Boolean, default: true },
 
-    addresses: [{
-        street: String,
-        city: String,
-        zip: String,
-        coordinates: [Number] // [long, lat]
-    }],
+    addresses: [UserAddressSchema],
 
     refreshToken: { type: String },
+
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: 'User' },
 }, {
     timestamps: true
 });
-
-// Indexes
-
 
 export const User = mongoose.model<IUser>('User', UserSchema);

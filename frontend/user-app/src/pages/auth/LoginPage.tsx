@@ -44,8 +44,8 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <Card className="w-[350px]">
+        <div className="flex items-center justify-center min-h-screen bg-muted">
+            <Card className="w-full max-w-sm">
                 <CardHeader>
                     <CardTitle>Login</CardTitle>
                     <CardDescription>Enter your credentials to access your account.</CardDescription>
@@ -76,7 +76,7 @@ export default function LoginPage() {
                     <Link to="/login/otp" className="text-sm text-blue-500 hover:underline">
                         Login with OTP instead
                     </Link>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                         Don't have an account? <Link to="/register" className="text-blue-500 hover:underline">Register</Link>
                     </p>
                 </CardFooter>

@@ -78,7 +78,7 @@ export default function JobRequestsPage() {
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <p className="font-medium">{job.subServiceName || job.serviceType}</p>
-                                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                                             <MapPin className="h-3 w-3" />
                                             {job.location?.address || "Location TBD"}
                                         </p>
@@ -87,7 +87,7 @@ export default function JobRequestsPage() {
                                         {job.status}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                                     <span className="flex items-center gap-1">
                                         <IndianRupee className="h-3 w-3" />
                                         ~₹{job.initialQuote || 0}

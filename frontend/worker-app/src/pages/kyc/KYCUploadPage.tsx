@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useState, useRef } from "react";
 import { ArrowLeft, Upload, FileCheck } from "lucide-react";
+import { toast } from "sonner";
 
 const docLabels: Record<string, string> = {
     AADHAAR: "Aadhaar Card",
@@ -48,6 +49,7 @@ export default function KYCUploadPage() {
                 documentType: docType,
                 documentUrl: fileUrl,
             });
+            toast.success(`${docLabels[docType] || "Document"} uploaded successfully!`);
             navigate("/kyc");
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to upload document.";
@@ -64,7 +66,7 @@ export default function KYCUploadPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Upload {docLabels[docType || ""] || "Document"}</h1>
-            <p className="text-gray-500 mb-6">Take a photo or upload an image of your document</p>
+            <p className="text-muted-foreground mb-6">Take a photo or upload an image of your document</p>
 
             <Card>
                 <CardContent className="py-8">
@@ -79,7 +81,7 @@ export default function KYCUploadPage() {
                     ) : (
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                            className="w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                             disabled={uploading}
                         >
                             <Upload className="h-10 w-10 mb-2" />

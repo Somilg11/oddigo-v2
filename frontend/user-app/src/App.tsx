@@ -25,6 +25,9 @@ import EditProfilePage from "./pages/profile/EditProfilePage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import WarrantyStatusPage from "./pages/warranty/WarrantyStatusPage";
 import WarrantyClaimPage from "./pages/warranty/WarrantyClaimPage";
+import PointsPage from "./pages/points/PointsPage";
+import ReferPage from "./pages/referral/ReferPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import { useAuthStore } from "./store/auth.store";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -42,6 +45,7 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/login/otp" element={<OTPLoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
 
                 <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                     <Route path="/" element={<ServiceCategoriesPage />} />
@@ -68,6 +72,8 @@ function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/profile/edit" element={<EditProfilePage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
+                    <Route path="/points" element={<PointsPage />} />
+                    <Route path="/refer" element={<ReferPage />} />
 
                     <Route path="/warranty/:jobId" element={<WarrantyStatusPage />} />
                     <Route path="/warranty/:jobId/claim" element={<WarrantyClaimPage />} />

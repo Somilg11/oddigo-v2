@@ -44,7 +44,7 @@ export default function OTPEntryPage() {
                     <CardTitle className="text-base">Customer OTP</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                         Ask the customer for the 6-digit OTP they received.
                     </p>
                     {error && (

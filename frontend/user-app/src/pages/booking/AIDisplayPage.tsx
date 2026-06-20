@@ -58,7 +58,7 @@ export default function AIDisplayPage() {
             <div className="flex flex-col items-center justify-center py-20">
                 <LoadingSpinner size="lg" />
                 <p className="mt-4 text-gray-600 font-medium">Analyzing your issue...</p>
-                <p className="text-sm text-gray-400">Our AI is examining the photos and details</p>
+                <p className="text-sm text-muted-foreground">Our AI is examining the photos and details</p>
             </div>
         );
     }
@@ -76,7 +76,7 @@ export default function AIDisplayPage() {
     return (
         <div className="p-4 max-w-2xl mx-auto">
             <h1 className="text-2xl font-bold mb-2">AI Analysis</h1>
-            <p className="text-gray-500 mb-6">Based on the photos and details you provided</p>
+            <p className="text-muted-foreground mb-6">Based on the photos and details you provided</p>
 
             {analysis ? (
                 <div className="space-y-4">
@@ -89,7 +89,7 @@ export default function AIDisplayPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="font-medium text-lg">{analysis.problemType}</p>
-                            <p className="text-sm text-gray-500 mt-1">Confidence: {Math.round((analysis.confidence || 0) * 100)}%</p>
+                            <p className="text-sm text-muted-foreground mt-1">Confidence: {Math.round((analysis.confidence || 0) * 100)}%</p>
                         </CardContent>
                     </Card>
 
@@ -140,7 +140,7 @@ export default function AIDisplayPage() {
                 </div>
             ) : (
                 <Card>
-                    <CardContent className="py-8 text-center text-gray-500">
+                    <CardContent className="py-8 text-center text-muted-foreground">
                         No AI analysis available for this issue.
                     </CardContent>
                 </Card>

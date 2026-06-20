@@ -58,7 +58,7 @@ export default function EarningsPage() {
             <div className="grid grid-cols-2 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <DollarSign className="h-4 w-4" /> Today
                         </CardTitle>
                     </CardHeader>
@@ -68,7 +68,7 @@ export default function EarningsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-4 w-4" /> This Week
                         </CardTitle>
                     </CardHeader>
@@ -78,7 +78,7 @@ export default function EarningsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <DollarSign className="h-4 w-4" /> This Month
                         </CardTitle>
                     </CardHeader>
@@ -88,13 +88,13 @@ export default function EarningsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <CheckCircle className="h-4 w-4" /> Total Earned
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{earnings?.totalEarnings || 0}</div>
-                        <p className="text-xs text-gray-400">{earnings?.completedJobs || 0} jobs</p>
+                        <p className="text-xs text-muted-foreground">{earnings?.completedJobs || 0} jobs</p>
                     </CardContent>
                 </Card>
             </div>

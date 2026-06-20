@@ -34,8 +34,8 @@ export default function ProfilePage() {
                 </div>
                 <div>
                     <p className="text-xl font-bold">{worker?.user?.name}</p>
-                    <p className="text-sm text-gray-500">{worker?.user?.email}</p>
-                    <p className="text-sm text-gray-500">{worker?.user?.phone}</p>
+                    <p className="text-sm text-muted-foreground">{worker?.user?.email}</p>
+                    <p className="text-sm text-muted-foreground">{worker?.user?.phone}</p>
                 </div>
             </div>
 
@@ -50,10 +50,10 @@ export default function ProfilePage() {
                         >
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <Icon className="h-5 w-5 text-gray-500" />
+                                    <Icon className="h-5 w-5 text-muted-foreground" />
                                     <span className="font-medium">{item.label}</span>
                                 </div>
-                                <ChevronRight className="h-4 w-4 text-gray-400" />
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </CardContent>
                         </Card>
                     );

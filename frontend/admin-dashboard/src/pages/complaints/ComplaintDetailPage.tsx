@@ -73,7 +73,7 @@ export default function ComplaintDetailPage() {
     if (!complaint) {
         return (
             <div className="p-4 text-center py-20">
-                <p className="text-gray-500">Complaint not found.</p>
+                <p className="text-muted-foreground">Complaint not found.</p>
             </div>
         );
     }
@@ -93,10 +93,10 @@ export default function ComplaintDetailPage() {
                     </CardHeader>
                     <CardContent>
                         <p>{complaint.description}</p>
-                        <p className="text-sm text-gray-500 mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">
                             Status: <span className="font-medium">{complaint.status}</span>
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                             Filed: {new Date(complaint.createdAt).toLocaleString()}
                         </p>
                     </CardContent>

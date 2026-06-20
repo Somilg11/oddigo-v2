@@ -74,12 +74,12 @@ export default function OTPDisplayPage() {
                                 {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
                                 {copied ? "Copied!" : "Copy OTP"}
                             </Button>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-muted-foreground">
                                 Share this code with the worker when they arrive to verify the job.
                             </p>
                         </>
                     ) : (
-                        <p className="text-gray-500 py-8">OTP not available yet. Waiting for worker to request.</p>
+                        <p className="text-muted-foreground py-8">OTP not available yet. Waiting for worker to request.</p>
                     )}
                 </CardContent>
             </Card>

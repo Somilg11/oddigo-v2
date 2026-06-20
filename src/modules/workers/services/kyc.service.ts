@@ -99,6 +99,32 @@ export class KYCService {
         return results;
     }
 
+    static async submitForVerification(workerId: string) {
+        const workerProfile = await WorkerProfile.findOne({ user: workerId });
+        if (!workerProfile) throw new AppError('Worker profile not found', 404);
+
+        const requiredTypes: KYCDocumentType[] = [
+            KYCDocumentType.AADHAAR,
+            KYCDocumentType.PAN,
+            KYCDocumentType.BANK_DETAILS
+        ];
+        const docs = await WorkerKYC.find({ worker: workerId });
+
+        const missingTypes = requiredTypes.filter(type =>
+            !docs.some(d => d.documentType === type)
+        );
+
+        if (missingTypes.length > 0) {
+            throw new AppError(`Please upload: ${missingTypes.join(', ')}`, 400);
+        }
+
+        workerProfile.verificationStatus = 'PENDING';
+        await workerProfile.save();
+
+        Logger.info(`Worker ${workerId} submitted KYC for verification`);
+        return { message: 'KYC submitted for verification', verificationStatus: 'PENDING' };
+    }
+
     private static async checkAndUpdateVerificationStatus(workerId: string) {
         const requiredDocs = [
             KYCDocumentType.AADHAAR,

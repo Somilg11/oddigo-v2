@@ -1,62 +1,107 @@
 # Real-time API (Socket.io)
 
-## Overview
-Connection URL: `ws://localhost:3000`
+**Connection URL:** `ws://localhost:3000`
+**Transport:** WebSocket (with HTTP long-polling fallback)
 
-Clients must authenticate via Handshake.
+---
 
 ## Authentication
-Pass the JWT Access Token in one of two ways:
-1. **Auth Payload**: `{ "token": "eyJ..." }`
-2. **Headers**: `{ "Authorization": "Bearer eyJ..." }`
 
-## Events
+Pass JWT in handshake:
 
-### 1. Job Offer (Worker)
-Received when a new job matches the worker's location and skills.
-- **Event**: `job:offer`
-- **Payload**:
-  ```json
-  {
-    "jobId": "60d...",
-    "serviceType": "cleaning",
-    "price": 50.00
-  }
-  ```
+```js
+const socket = io('http://localhost:3000', {
+  auth: { token: 'Bearer eyJ...' }
+});
+```
 
-### 2. Scope Creep Request (Customer)
-Received when worker requests an amendment.
-- **Event**: `job:scope-creep-request`
-- **Payload**:
-  ```json
-  {
-    "jobId": "60d...",
-    "reason": "Extra work",
-    "amount": 100
-  }
-  ```
+Or via headers:
+```js
+{ "Authorization": "Bearer eyJ..." }
+```
 
-### 3. Warranty Issued (Customer)
-Received upon job completion.
-- **Event**: `job:warranty-issued`
-- **Payload**:
-  ```json
-  {
-    "jobId": "60d...",
-    "warranty": true
-  }
-  ```
+---
 
-### 4. Live Tracking (Shared)
-Real-time location updates.
+## Client → Server Events
 
-**Emit (From Client):**
-- **Event**: `update-location`
-- **Payload**: `{ "lat": 28.1, "long": 77.2, "jobId": "60d..." }`
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `update-location` | `{ lat, long, jobId? }` | Worker sends current GPS coordinates |
+| `join-job` | `jobId` | Join a job room for live updates |
+| `leave-job` | `jobId` | Leave a job room |
 
-**Listen (On Client):**
-- **Event**: `live-tracking`
-- **Payload**: `{ "userId": "...", "lat": 28.1, "long": 77.2 }`
+**Example:**
+```js
+socket.emit('update-location', { lat: 28.5355, long: 77.3910, jobId: '64c3...' });
+socket.emit('join-job', '64c3d4e5...');
+```
 
-To receive updates, join the job room:
-- **Emit**: `join-job` with `jobId`.
+---
+
+## Server → Client Events
+
+### Job Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `job:offer` | `{ jobId, serviceType, price, customer, location }` | New job offer for worker |
+| `job:assigned` | `{ jobId, worker }` | Job assigned to a worker |
+| `job:otp` | `{ jobId, otp }` | OTP sent to customer for verification |
+| `job:estimate` | `{ jobId, estimate }` | Worker submitted cost estimate |
+| `job:price-approved` | `{ jobId, approved }` | Customer approved/rejected final price |
+| `job:scope-creep-request` | `{ jobId, reason, amount }` | Amendment request from worker |
+| `job:scope-creep-response` | `{ jobId, approved }` | Customer responded to amendment |
+| `job:completed` | `{ jobId }` | Job marked as completed |
+| `job:warranty-issued` | `{ jobId, warranty: true }` | Warranty issued on completion |
+| `job:cancelled` | `{ jobId, reason }` | Job cancelled |
+
+### Tracking Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `live-tracking` | `{ userId, lat, long }` | Real-time worker location |
+
+### Notification Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `notification` | `{ type, title, message, data }` | Push notification to user |
+
+---
+
+## Connection Flow
+
+1. **Connect** with auth token
+2. **Worker:** Emits `update-location` periodically (every 10s when online)
+3. **Customer:** Listens to `live-tracking` to show worker on map
+4. **Both:** `join-job` to receive job-specific events
+5. **Worker:** Listens to `job:offer` for new jobs
+6. **Customer:** Listens to `job:estimate`, `job:otp`, etc.
+
+---
+
+## Example Client Setup
+
+```js
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000', {
+  auth: { token: `Bearer ${accessToken}` }
+});
+
+// Worker goes online
+socket.emit('update-location', { lat: 28.5355, long: 77.3910 });
+
+// Listen for job offers (worker)
+socket.on('job:offer', (data) => {
+  console.log('New job:', data);
+});
+
+// Customer joins a job room
+socket.emit('join-job', jobId);
+
+// Customer tracks worker location
+socket.on('live-tracking', (data) => {
+  updateMapMarker(data.lat, data.long);
+});
+```

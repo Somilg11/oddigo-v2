@@ -78,15 +78,15 @@ export default function EstimateApprovalPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Visit Charge</span>
+                        <span className="text-muted-foreground">Visit Charge</span>
                         <span>₹{estimate?.visitCharge || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Labour Cost</span>
+                        <span className="text-muted-foreground">Labour Cost</span>
                         <span>₹{estimate?.labourCost || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Parts Cost</span>
+                        <span className="text-muted-foreground">Parts Cost</span>
                         <span>₹{estimate?.partsCost || 0}</span>
                     </div>
                     <div className="border-t pt-3 flex justify-between font-bold">
@@ -94,7 +94,7 @@ export default function EstimateApprovalPage() {
                         <span>₹{estimate?.totalEstimate || 0}</span>
                     </div>
                     {estimate?.notes && (
-                        <p className="text-sm text-gray-500 pt-2">{estimate.notes}</p>
+                        <p className="text-sm text-muted-foreground pt-2">{estimate.notes}</p>
                     )}
                 </CardContent>
             </Card>

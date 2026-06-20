@@ -183,8 +183,16 @@ export class JobController {
 
     static async getHistory(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const jobs = await JobService.getJobHistory(req.user._id, req.user.role);
-            res.status(200).json({ success: true, results: jobs.length, data: jobs });
+            const { page = '1', limit = '15' } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const result = await JobService.getJobHistory(req.user._id, req.user.role, pageNum, limitNum);
+            res.status(200).json({
+                success: true,
+                results: result.jobs.length,
+                pagination: { page: result.page, limit: result.limit, total: result.total, pages: result.pages },
+                data: result.jobs
+            });
         } catch (error) {
             next(error);
         }

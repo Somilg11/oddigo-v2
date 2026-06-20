@@ -11,6 +11,7 @@ import warrantyRoutes from '../modules/warranty/routes/warranty.routes';
 import fieldExecutiveRoutes from '../modules/field-executive/routes/field-executive.routes';
 import zoneManagerRoutes from '../modules/zones/routes/zone-manager.routes';
 import cityManagerRoutes from '../modules/city-manager/routes/city-manager.routes';
+import couponRoutes from '../modules/admin/routes/coupon.routes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/field-executive', fieldExecutiveRoutes);
 router.use('/zone-manager', zoneManagerRoutes);
 router.use('/city-manager', cityManagerRoutes);
 router.use('/admin', adminRoutes);
+router.use('/coupons', couponRoutes);
 
 export default router;

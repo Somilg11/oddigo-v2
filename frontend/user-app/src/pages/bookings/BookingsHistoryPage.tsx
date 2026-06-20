@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
-import { extractList } from "@/lib/api-helpers";
+import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Pagination } from "@/components/common/Pagination";
 import { PageError } from "@/components/common/PageError";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
@@ -22,22 +23,30 @@ export default function BookingsHistoryPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+
+    const fetchJobs = useCallback(async () => {
+        try {
+            setError(null);
+            setLoading(true);
+            const response = await api.get(`/jobs/history?page=${page}&limit=15`);
+            setJobs(extractData(response));
+            if (response.data.pagination) {
+                setPagination(response.data.pagination);
+            }
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to load data";
+            setError(message);
+            logger.error("Failed to fetch jobs", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [page]);
 
     useEffect(() => {
-        const fetchJobs = async () => {
-            try {
-                const response = await api.get("/jobs/history");
-                setJobs(extractList(response));
-            } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : "Failed to load data";
-                setError(message);
-                logger.error("Failed to fetch jobs", err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchJobs();
-    }, []);
+    }, [fetchJobs]);
 
     if (loading) {
         return (
@@ -48,7 +57,7 @@ export default function BookingsHistoryPage() {
     }
 
     if (error) {
-        return <PageError message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />;
+        return <PageError message={error} onRetry={fetchJobs} />;
     }
 
     return (
@@ -63,7 +72,7 @@ export default function BookingsHistoryPage() {
             ) : (
                 <div className="space-y-3">
                     {jobs.map((job) => {
-                        const config = statusConfig[job.status] || { label: job.status, color: "text-gray-600 bg-gray-50", icon: Clock };
+                        const config = statusConfig[job.status] || { label: job.status, color: "text-gray-600 bg-muted/50", icon: Clock };
                         const Icon = config.icon;
                         return (
                             <Card
@@ -75,10 +84,10 @@ export default function BookingsHistoryPage() {
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <p className="font-medium">{job.subServiceName || job.serviceType}</p>
-                                            <p className="text-sm text-gray-500 mt-1">
+                                            <p className="text-sm text-muted-foreground mt-1">
                                                 {job.location?.address || "No address"}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-1">
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 {new Date(job.createdAt).toLocaleDateString()}
                                             </p>
                                         </div>
@@ -93,6 +102,8 @@ export default function BookingsHistoryPage() {
                     })}
                 </div>
             )}
+
+            <Pagination page={pagination.page} pages={pagination.pages} onPageChange={setPage} />
         </div>
     );
 }

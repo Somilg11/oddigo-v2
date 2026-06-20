@@ -10,8 +10,8 @@ export class AuthController {
 
     static async signup(req: Request, res: Response, next: NextFunction) {
         try {
-            const { name, email, phone, password, role, serviceType, hourlyRate } = req.body;
-            const result = await AuthService.signup({ name, email, phone, role }, password, serviceType, hourlyRate);
+            const { name, email, phone, password, role, serviceType, hourlyRate, referralCode } = req.body;
+            const result = await AuthService.signup({ name, email, phone, role }, password, serviceType, hourlyRate, referralCode);
             res.status(201).json({
                 success: true,
                 data: result

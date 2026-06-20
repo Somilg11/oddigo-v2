@@ -1,11 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, ClipboardList, Bell, User } from "lucide-react";
+import { Home, ClipboardList, Bell, User, Coins, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
     { path: "/", label: "Home", icon: Home },
     { path: "/bookings", label: "Bookings", icon: ClipboardList },
-    { path: "/notifications", label: "Notifications", icon: Bell },
+    { path: "/points", label: "Points", icon: Coins },
+    { path: "/refer", label: "Refer", icon: Share2 },
     { path: "/profile", label: "Profile", icon: User },
 ];
 
@@ -19,7 +20,7 @@ export function BottomNav() {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50 md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50 md:hidden">
             <div className="flex items-center justify-around h-14">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
@@ -30,7 +31,7 @@ export function BottomNav() {
                             onClick={() => navigate(tab.path)}
                             className={cn(
                                 "flex flex-col items-center gap-0.5 py-1 px-3 text-xs transition-colors",
-                                active ? "text-primary font-semibold" : "text-gray-500"
+                                active ? "text-primary font-semibold" : "text-muted-foreground"
                             )}
                         >
                             <Icon className="h-5 w-5" />

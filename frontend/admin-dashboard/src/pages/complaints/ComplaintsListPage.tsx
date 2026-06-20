@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
-import { extractList } from "@/lib/api-helpers";
+import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import { PageError } from "@/components/common/PageError";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Pagination } from "@/components/common/Pagination";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ArrowUpRight } from "lucide-react";
 import type { Complaint } from "@/types";
@@ -16,7 +17,7 @@ const statusColors: Record<string, string> = {
     IN_REVIEW: "text-blue-600 bg-blue-50",
     ESCALATED: "text-orange-600 bg-orange-50",
     RESOLVED: "text-green-600 bg-green-50",
-    CLOSED: "text-gray-600 bg-gray-50",
+    CLOSED: "text-gray-600 bg-muted/50",
 };
 
 export default function ComplaintsListPage() {
@@ -25,14 +26,21 @@ export default function ComplaintsListPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<string>("");
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, pages: 1 });
 
-    const fetchComplaints = async () => {
+    const fetchComplaints = useCallback(async () => {
         try {
             setError(null);
             const params = new URLSearchParams();
             if (filter) params.set("status", filter);
+            params.set("page", String(page));
+            params.set("limit", "15");
             const response = await api.get(`/admin/complaints?${params.toString()}`);
-            setComplaints(extractList(response));
+            setComplaints(extractData(response));
+            if (response.data.pagination) {
+                setPagination(response.data.pagination);
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to fetch complaints";
             setError(message);
@@ -40,11 +48,11 @@ export default function ComplaintsListPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filter, page]);
 
     useEffect(() => {
         fetchComplaints();
-    }, [filter]);
+    }, [fetchComplaints]);
 
     if (loading) {
         return (
@@ -89,7 +97,7 @@ export default function ComplaintsListPage() {
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <p className="font-medium">{complaint.description?.slice(0, 80) || "Complaint"}</p>
-                                        <p className="text-sm text-gray-500 mt-1">
+                                        <p className="text-sm text-muted-foreground mt-1">
                                             {new Date(complaint.createdAt).toLocaleDateString()}
                                         </p>
                                     </div>
@@ -97,7 +105,7 @@ export default function ComplaintsListPage() {
                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[complaint.status] || ""}`}>
                                             {complaint.status}
                                         </span>
-                                        <ArrowUpRight className="h-4 w-4 text-gray-400" />
+                                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -105,6 +113,8 @@ export default function ComplaintsListPage() {
                     ))}
                 </div>
             )}
+
+            <Pagination page={pagination.page} pages={pagination.pages} onPageChange={setPage} />
         </div>
     );
 }

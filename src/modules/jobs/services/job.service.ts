@@ -9,6 +9,8 @@ import ServiceFactory from '../../../core/services/service.factory';
 import redis from '../../../config/redis';
 import { Logger } from '../../../config/logger';
 import { PricingType } from '../../services/models/SubService';
+import { Coupon, CouponType } from '../../admin/models/Coupon';
+import { PointsService } from '../../users/services/points.service';
 
 const generateOTP = (): string => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -16,7 +18,7 @@ const generateOTP = (): string => {
 
 export class JobService {
 
-    static async createJob(customer: IUser, data: Partial<IJob>) {
+    static async createJob(customer: IUser, data: Partial<IJob> & { couponCode?: string }) {
         if (!data.location || !data.serviceType) {
             throw new AppError('Location and Service Type are required', 400);
         }
@@ -24,14 +26,43 @@ export class JobService {
         const distanceKm = 5;
         const pricing = await PricingEngine.getEstimate(data.serviceType, distanceKm, data.subService?.toString());
 
+        let discount = 0;
+        let couponCode: string | undefined;
+
+        if (data.couponCode) {
+            const coupon = await Coupon.findOne({ code: data.couponCode.toUpperCase() });
+            if (!coupon || !coupon.isActive) throw new AppError('Invalid coupon code', 400);
+
+            const now = new Date();
+            if (coupon.startsAt && now < coupon.startsAt) throw new AppError('This coupon is not yet valid', 400);
+            if (coupon.expiresAt && now > coupon.expiresAt) throw new AppError('This coupon has expired', 400);
+            if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) throw new AppError('Coupon usage limit reached', 400);
+
+            const jobAmount = pricing.totalEstimate;
+            if (coupon.minOrderAmount && jobAmount < coupon.minOrderAmount) {
+                throw new AppError(`Minimum order amount is ₹${coupon.minOrderAmount}`, 400);
+            }
+
+            if (coupon.type === CouponType.PERCENTAGE) {
+                discount = Math.round(jobAmount * coupon.value / 100);
+                if (coupon.maxDiscount && discount > coupon.maxDiscount) discount = coupon.maxDiscount;
+            } else if (coupon.type === CouponType.FLAT) {
+                discount = coupon.value;
+            }
+
+            couponCode = coupon.code;
+        }
+
         const job = await Job.create({
             ...data,
             customer: customer._id,
             initialQuote: pricing.totalEstimate,
+            couponCode,
+            discount,
             status: JobStatus.CREATED
         });
 
-        Logger.info(`Job created: ${job._id} by customer ${customer._id}`);
+        Logger.info(`Job created: ${job._id} by customer ${customer._id}${discount ? ` with coupon ${couponCode} (₹${discount} off)` : ''}`);
 
         return job;
     }
@@ -337,6 +368,13 @@ export class JobService {
         const warranty = await WarrantyService.issueWarranty(job);
         job.warrantyId = warranty._id;
 
+        // Award completion points
+        try {
+            await PointsService.awardJobCompletionPoints(job);
+        } catch (err) {
+            Logger.error(`Failed to award points for job ${jobId}: ${err}`);
+        }
+
         if (job.customer) {
             SocketService.emitToUser(job.customer.toString(), SocketService.NOTIFICATION_WARRANTY, {
                 jobId: job._id,
@@ -382,7 +420,7 @@ export class JobService {
             throw new AppError('Payment already completed for this job', 400);
         }
 
-        const amount = job.finalQuote || job.initialQuote;
+        const amount = (job.finalQuote || job.initialQuote) - (job.discount || 0);
 
         const paymentIntent = await ServiceFactory.getPaymentProvider().createPaymentIntent(
             amount,
@@ -390,7 +428,7 @@ export class JobService {
             {
                 jobId: (job._id as any).toString(),
                 paymentMethod,
-                description: `Job ${jobId} - ${paymentMethod}`
+                description: `Job ${jobId} - ${paymentMethod}${job.discount ? ` (₹${job.discount} coupon applied)` : ''}`
             }
         );
 
@@ -398,6 +436,15 @@ export class JobService {
         job.paymentStatus = PaymentStatus.PROCESSING;
         job.transactionId = paymentIntent.id;
         await job.save();
+
+        // Increment coupon usage count if coupon was applied
+        if (job.couponCode) {
+            await Coupon.findOneAndUpdate(
+                { code: job.couponCode },
+                { $inc: { usageCount: 1 } }
+            );
+            Logger.info(`Coupon ${job.couponCode} usage incremented for job ${jobId}`);
+        }
 
         Logger.info(`Payment order created for job ${jobId}: ₹${amount} via ${paymentMethod} (order: ${paymentIntent.id})`);
         return { job, paymentIntent };
@@ -459,14 +506,19 @@ export class JobService {
         return job;
     }
 
-    static async getJobHistory(userId: string, role: string) {
+    static async getJobHistory(userId: string, role: string, page = 1, limit = 15) {
         const query = role === 'WORKER' ? { worker: userId } : { customer: userId };
-        const jobs = await Job.find(query)
-            .sort({ createdAt: -1 })
-            .populate('customer', 'name email phone avatarUrl')
-            .populate('worker', 'name email phone avatarUrl')
-            .populate('subService', 'name slug basePrice');
-        return jobs;
+        const skip = (page - 1) * limit;
+        const [jobs, total] = await Promise.all([
+            Job.find(query).sort({ createdAt: -1 })
+                .populate('customer', 'name email phone avatarUrl')
+                .populate('worker', 'name email phone avatarUrl')
+                .populate('subService', 'name slug basePrice')
+                .skip(skip)
+                .limit(limit),
+            Job.countDocuments(query)
+        ]);
+        return { jobs, total, page, limit, pages: Math.ceil(total / limit) };
     }
 
     static async cancelJob(jobId: string, userId: string) {

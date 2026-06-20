@@ -51,7 +51,7 @@ export default function ServiceDetailPage() {
 
     if (!service) {
         return (
-            <div className="p-4 text-center text-gray-500 py-20">
+            <div className="p-4 text-center text-muted-foreground py-20">
                 Service not found.
             </div>
         );
@@ -71,7 +71,7 @@ export default function ServiceDetailPage() {
                         </div>
                         <div>
                             <CardTitle className="text-xl">{service.name}</CardTitle>
-                            <p className="text-sm text-gray-500">{service.category && typeof service.category === 'object' ? service.category.name : ''}</p>
+                            <p className="text-sm text-muted-foreground">{service.category && typeof service.category === 'object' ? service.category.name : ''}</p>
                         </div>
                     </div>
                 </CardHeader>
@@ -79,19 +79,19 @@ export default function ServiceDetailPage() {
                     <p className="text-gray-700">{service.description}</p>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                        <div className="bg-muted/50 rounded-lg p-4 text-center">
                             <IndianRupee className="h-5 w-5 mx-auto mb-1 text-gray-600" />
                             <p className="text-lg font-bold">
                                 {service.pricingType === "FIXED" ? `₹${service.basePrice}` : `~₹${service.basePrice}`}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 {service.pricingType === "FIXED" ? "Fixed Price" : "Estimated Price"}
                             </p>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                        <div className="bg-muted/50 rounded-lg p-4 text-center">
                             <Clock className="h-5 w-5 mx-auto mb-1 text-gray-600" />
                             <p className="text-lg font-bold">{service.estimatedTime} min</p>
-                            <p className="text-xs text-gray-500">Estimated Time</p>
+                            <p className="text-xs text-muted-foreground">Estimated Time</p>
                         </div>
                     </div>
 

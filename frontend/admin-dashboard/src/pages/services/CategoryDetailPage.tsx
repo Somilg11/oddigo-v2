@@ -106,7 +106,7 @@ export default function CategoryDetailPage() {
 
             {subServices.length === 0 ? (
                 <Card>
-                    <CardContent className="py-12 text-center text-gray-500">
+                    <CardContent className="py-12 text-center text-muted-foreground">
                         No sub-services in this category yet.
                     </CardContent>
                 </Card>

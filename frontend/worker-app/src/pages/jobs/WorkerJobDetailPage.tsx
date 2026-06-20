@@ -52,7 +52,7 @@ export default function WorkerJobDetailPage() {
     if (!job) {
         return (
             <div className="p-4 text-center py-20">
-                <p className="text-gray-500">Job not found.</p>
+                <p className="text-muted-foreground">Job not found.</p>
             </div>
         );
     }
@@ -72,11 +72,11 @@ export default function WorkerJobDetailPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <p className="font-medium">{job.subServiceName || job.serviceType}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-4 w-4" />
                             <span>{job.location?.address || "No address"}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="h-4 w-4" />
                             <span>{new Date(job.createdAt).toLocaleString()}</span>
                         </div>
@@ -92,7 +92,7 @@ export default function WorkerJobDetailPage() {
                         </CardHeader>
                         <CardContent>
                             <p className="font-medium">{job.customer.name}</p>
-                            <p className="text-sm text-gray-500">{job.customer.phone}</p>
+                            <p className="text-sm text-muted-foreground">{job.customer.phone}</p>
                         </CardContent>
                     </Card>
                 )}
@@ -106,15 +106,15 @@ export default function WorkerJobDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Visit Charge</span>
+                                <span className="text-muted-foreground">Visit Charge</span>
                                 <span>₹{job.estimate.visitCharge}</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Labour Cost</span>
+                                <span className="text-muted-foreground">Labour Cost</span>
                                 <span>₹{job.estimate.labourCost}</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Parts Cost</span>
+                                <span className="text-muted-foreground">Parts Cost</span>
                                 <span>₹{job.estimate.partsCost}</span>
                             </div>
                             <div className="border-t pt-2 flex justify-between font-bold">

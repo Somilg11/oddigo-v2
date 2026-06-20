@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import type { ServiceCategory } from "@/types";
 import { PageError } from "@/components/common/PageError";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Pagination } from "@/components/common/Pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,8 @@ export default function ServicesListPage() {
     const [categories, setCategories] = useState<ServiceCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, pages: 1 });
 
     const [formOpen, setFormOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
@@ -28,8 +31,11 @@ export default function ServicesListPage() {
     const fetchCategories = useCallback(async () => {
         try {
             setError(null);
-            const response = await api.get("/admin/services/categories");
+            const response = await api.get(`/admin/services/categories?page=${page}&limit=15`);
             setCategories(extractData(response));
+            if (response.data.pagination) {
+                setPagination(response.data.pagination);
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to fetch categories";
             setError(message);
@@ -37,7 +43,7 @@ export default function ServicesListPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page]);
 
     useEffect(() => {
         fetchCategories();
@@ -88,7 +94,7 @@ export default function ServicesListPage() {
 
             {categories.length === 0 ? (
                 <Card>
-                    <CardContent className="py-12 text-center text-gray-500">
+                    <CardContent className="py-12 text-center text-muted-foreground">
                         No service categories yet. Create one to get started.
                     </CardContent>
                 </Card>
@@ -158,6 +164,8 @@ export default function ServicesListPage() {
                 onSuccess={fetchCategories}
                 category={editingCategory}
             />
+
+            <Pagination page={pagination.page} pages={pagination.pages} onPageChange={setPage} />
 
             <AlertDialog open={!!deletingCategory} onOpenChange={(v) => !v && setDeletingCategory(null)}>
                 <AlertDialogContent>

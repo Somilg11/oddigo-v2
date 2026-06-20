@@ -59,7 +59,7 @@ export default function SubServicesPage() {
             </Button>
             <h1 className="text-2xl font-bold mb-6">Select a Service</h1>
             {subServices.length === 0 ? (
-                <p className="text-center text-gray-500 py-12">No sub-services available.</p>
+                <p className="text-center text-muted-foreground py-12">No sub-services available.</p>
             ) : (
                 <div className="space-y-3">
                     {subServices.map((sub) => (
@@ -73,7 +73,7 @@ export default function SubServicesPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-gray-600 mb-2">{sub.description}</p>
-                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                         <IndianRupee className="h-3 w-3" />
                                         {sub.pricingType === "FIXED" ? `₹${sub.basePrice}` : `~₹${sub.basePrice}`}

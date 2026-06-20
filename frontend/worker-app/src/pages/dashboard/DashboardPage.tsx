@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PageError } from "@/components/common/PageError";
-import { Wifi, WifiOff, CheckCircle, DollarSign, Clock, Briefcase } from "lucide-react";
+import { Wifi, WifiOff, CheckCircle, DollarSign, Clock, Briefcase, X } from "lucide-react";
 
 interface WorkerStats {
     totalJobs: number;
@@ -26,6 +26,9 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [toggling, setToggling] = useState(false);
+    const [dismissed, setDismissed] = useState(() => {
+        return localStorage.getItem('oddigo_kyc_dismissed') === 'true';
+    });
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -92,7 +95,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">Dashboard</h1>
-                    <p className="text-sm text-gray-500">Welcome back, {worker?.user?.name || "Worker"}</p>
+                    <p className="text-sm text-muted-foreground">Welcome back, {worker?.user?.name || "Worker"}</p>
                 </div>
                 <Button
                     onClick={toggleAvailability}
@@ -109,12 +112,23 @@ export default function DashboardPage() {
                 </Button>
             </div>
 
-            {!isVerified && (
+            {!isVerified && !dismissed && (
                 <Card className="border-amber-200 bg-amber-50">
                     <CardContent className="p-4">
-                        <p className="text-amber-700 text-sm">
-                            Your account is pending verification. Complete KYC to start receiving jobs.
-                        </p>
+                        <div className="flex items-start justify-between">
+                            <p className="text-amber-700 text-sm">
+                                Your account is pending verification. Complete KYC to start receiving jobs.
+                            </p>
+                            <button
+                                className="ml-2 text-amber-400 hover:text-amber-600 shrink-0"
+                                onClick={() => {
+                                    setDismissed(true);
+                                    localStorage.setItem('oddigo_kyc_dismissed', 'true');
+                                }}
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
                         <Button variant="outline" size="sm" className="mt-2" onClick={() => navigate("/kyc")}>
                             Complete KYC
                         </Button>
@@ -127,7 +141,7 @@ export default function DashboardPage() {
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
                             <p className="font-medium text-primary">Active Job</p>
-                            <p className="text-sm text-gray-500">Tap to view details</p>
+                            <p className="text-sm text-muted-foreground">Tap to view details</p>
                         </div>
                         <Briefcase className="h-6 w-6 text-primary" />
                     </CardContent>
@@ -137,18 +151,18 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <CheckCircle className="h-4 w-4" /> Completed
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats?.completedJobs || 0}</div>
-                        <p className="text-xs text-gray-400">{stats?.totalJobs || 0} total</p>
+                        <p className="text-xs text-muted-foreground">{stats?.totalJobs || 0} total</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <DollarSign className="h-4 w-4" /> Today
                         </CardTitle>
                     </CardHeader>
@@ -158,7 +172,7 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <DollarSign className="h-4 w-4" /> Total Earnings
                         </CardTitle>
                     </CardHeader>
@@ -168,7 +182,7 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-4 w-4" /> Rating
                         </CardTitle>
                     </CardHeader>

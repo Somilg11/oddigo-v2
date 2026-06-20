@@ -57,7 +57,7 @@ export default function CompleteJobPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Complete Job</h1>
-            <p className="text-gray-500 mb-6">Upload proof of completion and submit</p>
+            <p className="text-muted-foreground mb-6">Upload proof of completion and submit</p>
 
             <Card className="mb-4">
                 <CardHeader>
@@ -77,7 +77,7 @@ export default function CompleteJobPage() {
                     ) : (
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                            className="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                             disabled={uploading}
                         >
                             <Upload className="h-8 w-8 mb-1" />

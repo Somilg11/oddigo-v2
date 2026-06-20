@@ -21,11 +21,11 @@ export default function WorkerSelectionPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Available Workers</h1>
-            <p className="text-gray-500 mb-6">{matchedWorkers.length} workers found nearby</p>
+            <p className="text-muted-foreground mb-6">{matchedWorkers.length} workers found nearby</p>
 
             {matchedWorkers.length === 0 ? (
                 <Card>
-                    <CardContent className="py-12 text-center text-gray-500">
+                    <CardContent className="py-12 text-center text-muted-foreground">
                         No workers available at the moment. Please try again later.
                     </CardContent>
                 </Card>
@@ -44,7 +44,7 @@ export default function WorkerSelectionPage() {
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-medium">{worker.user?.name || "Worker"}</p>
-                                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
                                             <span className="flex items-center gap-1">
                                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                                 {worker.avgRating?.toFixed(1) || "N/A"}

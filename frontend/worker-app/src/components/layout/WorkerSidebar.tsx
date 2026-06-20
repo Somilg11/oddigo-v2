@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, LayoutDashboard, Briefcase, FileCheck, User } from "lucide-react";
+import { LogOut, LayoutDashboard, Briefcase, FileCheck, User } from "lucide-react";
 
 const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -25,15 +25,6 @@ export function WorkerSidebar() {
 
     return (
         <>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden fixed top-3 left-3 z-50"
-                onClick={() => setOpen(!open)}
-            >
-                {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-
             {open && (
                 <div
                     className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -42,8 +33,8 @@ export function WorkerSidebar() {
             )}
 
             <aside
-                className={`fixed top-0 left-0 h-full w-64 bg-white border-r z-40 transform transition-transform duration-200
-                    ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+                className={`fixed top-0 left-0 h-full w-64 bg-card border-r z-40 transform transition-transform duration-200
+                    -translate-x-full md:translate-x-0`}
             >
                 <div className="p-4 border-b">
                     <h2 className="text-lg font-bold text-primary">Oddigo Worker</h2>
@@ -61,7 +52,7 @@ export function WorkerSidebar() {
                                     setOpen(false);
                                 }}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                                    ${isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-600 hover:bg-gray-100"}`}
+                                    ${isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted"}`}
                             >
                                 <Icon className="h-4 w-4" />
                                 {item.label}

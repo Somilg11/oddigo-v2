@@ -142,6 +142,8 @@ export interface Job {
     paymentStatus?: PaymentStatus;
     transactionId?: string;
     warrantyId?: string;
+    couponCode?: string;
+    discount?: number;
     scheduledAt: string;
     startedAt?: string;
     workerArrivedAt?: string;
@@ -232,6 +234,46 @@ export interface LiveOperations {
     workersBusy: number;
     workersOffline: number;
     activeJobs: number;
+}
+
+export type BannerType = 'PROMOTION' | 'ANNOUNCEMENT' | 'COUPON' | 'INFO';
+
+export interface Banner {
+    _id: string;
+    title: string;
+    subtitle?: string;
+    imageUrl?: string;
+    linkUrl?: string;
+    type: BannerType;
+    isActive: boolean;
+    sortOrder: number;
+    startsAt?: string;
+    expiresAt?: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type CouponType = 'PERCENTAGE' | 'FLAT' | 'FREE_DELIVERY';
+
+export interface Coupon {
+    _id: string;
+    code: string;
+    description: string;
+    type: CouponType;
+    value: number;
+    minOrderAmount?: number;
+    maxDiscount?: number;
+    usageLimit?: number;
+    usageCount: number;
+    perUserLimit?: number;
+    applicableCategories?: string[];
+    isActive: boolean;
+    startsAt?: string;
+    expiresAt?: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface ApiResponse<T> {

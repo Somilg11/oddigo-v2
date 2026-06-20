@@ -19,14 +19,14 @@ if (allowedOrigins.length === 0) {
 app.use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-App-Type'],
     credentials: true
 }));
 
 // Rate Limiting
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 500,
     message: 'Too many requests from this IP, please try again in 15 minutes'
 });
 

@@ -20,14 +20,21 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [maintenance, setMaintenance] = useState({ app: "user-app", enabled: false });
+    const [maintenance, setMaintenance] = useState({ userApp: false, workerApp: false });
     const [toggling, setToggling] = useState(false);
 
     const fetchHealth = async () => {
         try {
             setError(null);
             const response = await api.get("/admin/health");
-            setHealth(extractData(response));
+            const data = extractData(response);
+            setHealth(data);
+            if (data?.maintenance) {
+                setMaintenance({
+                    userApp: data.maintenance.userApp ?? false,
+                    workerApp: data.maintenance.workerApp ?? false,
+                });
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to fetch health";
             setError(message);
@@ -41,11 +48,15 @@ export default function SettingsPage() {
         fetchHealth();
     }, []);
 
-    const toggleMaintenance = async (app: string, enabled: boolean) => {
+    const toggleMaintenance = async (app: "user-app" | "worker-app", enabled: boolean) => {
         setToggling(true);
         try {
-            await api.post("/admin/maintenance", { app, enabled });
-            setMaintenance({ app, enabled });
+            const apiAppType = app === "user-app" ? "USER" : "WORKER";
+            await api.post("/admin/maintenance", { app: apiAppType, enabled });
+            setMaintenance((prev) => ({
+                ...prev,
+                [app === "user-app" ? "userApp" : "workerApp"]: enabled,
+            }));
             const action = enabled ? "enabled" : "disabled";
             setSuccess(`Maintenance mode ${action} for ${app}`);
         } catch (err: unknown) {
@@ -121,20 +132,23 @@ export default function SettingsPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <p className="text-sm text-gray-500">Toggle maintenance mode for each app. Users will see a maintenance screen.</p>
-                    {["user-app", "worker-app"].map((app) => (
-                        <div key={app} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="font-medium text-sm">{app}</span>
-                            <Button
-                                variant={maintenance.app === app && maintenance.enabled ? "destructive" : "outline"}
-                                size="sm"
-                                onClick={() => toggleMaintenance(app, !(maintenance.app === app && maintenance.enabled))}
-                                disabled={toggling}
-                            >
-                                {maintenance.app === app && maintenance.enabled ? "Disable" : "Enable"}
-                            </Button>
-                        </div>
-                    ))}
+                    <p className="text-sm text-muted-foreground">Toggle maintenance mode for each app. Users will see a maintenance screen.</p>
+                    {(["user-app", "worker-app"] as const).map((app) => {
+                        const isEnabled = app === "user-app" ? maintenance.userApp : maintenance.workerApp;
+                        return (
+                            <div key={app} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                <span className="font-medium text-sm">{app}</span>
+                                <Button
+                                    variant={isEnabled ? "destructive" : "outline"}
+                                    size="sm"
+                                    onClick={() => toggleMaintenance(app, !isEnabled)}
+                                    disabled={toggling}
+                                >
+                                    {isEnabled ? "Disable" : "Enable"}
+                                </Button>
+                            </div>
+                        );
+                    })}
                 </CardContent>
             </Card>
         </div>

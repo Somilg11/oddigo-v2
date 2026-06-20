@@ -113,7 +113,7 @@ export default function IssueUploadPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Describe Your Issue</h1>
-            <p className="text-gray-500 mb-6">Upload photos and videos to help us understand the problem.</p>
+            <p className="text-muted-foreground mb-6">Upload photos and videos to help us understand the problem.</p>
 
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm mb-4">
@@ -141,7 +141,7 @@ export default function IssueUploadPage() {
                             ))}
                             <button
                                 onClick={() => photoInputRef.current?.click()}
-                                className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                                className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                                 disabled={uploading}
                             >
                                 <Upload className="h-6 w-6" />
@@ -155,7 +155,7 @@ export default function IssueUploadPage() {
                             className="hidden"
                             onChange={handlePhotoUpload}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Upload at least 1 photo</p>
+                        <p className="text-xs text-muted-foreground mt-2">Upload at least 1 photo</p>
                     </CardContent>
                 </Card>
 
@@ -178,7 +178,7 @@ export default function IssueUploadPage() {
                             ))}
                             <button
                                 onClick={() => videoInputRef.current?.click()}
-                                className="w-24 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                                className="w-24 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                                 disabled={uploading}
                             >
                                 <Video className="h-6 w-6" />

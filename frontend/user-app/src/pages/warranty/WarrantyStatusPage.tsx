@@ -48,7 +48,7 @@ export default function WarrantyStatusPage() {
     if (!warranty) {
         return (
             <div className="p-4 text-center py-20">
-                <p className="text-gray-500">No warranty found for this job.</p>
+                <p className="text-muted-foreground">No warranty found for this job.</p>
                 <Button className="mt-4" onClick={() => navigate(-1)}>Go Back</Button>
             </div>
         );
@@ -76,17 +76,17 @@ export default function WarrantyStatusPage() {
                         <div className={`text-4xl font-bold mb-2 ${warranty.isActive ? "text-green-600" : "text-red-500"}`}>
                             {warranty.isActive ? `${daysRemaining} days` : "Expired"}
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                             {warranty.isActive ? "remaining" : "This warranty has expired"}
                         </p>
                     </div>
                     <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-gray-500">Coverage</span>
+                            <span className="text-muted-foreground">Coverage</span>
                             <span>{warranty.coverageDetails || "Standard warranty"}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-500">Expires</span>
+                            <span className="text-muted-foreground">Expires</span>
                             <span>{new Date(warranty.expiresAt).toLocaleDateString()}</span>
                         </div>
                     </div>

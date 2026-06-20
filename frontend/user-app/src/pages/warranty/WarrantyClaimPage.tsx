@@ -69,7 +69,7 @@ export default function WarrantyClaimPage() {
                     <span className="text-2xl">✓</span>
                 </div>
                 <h2 className="text-xl font-bold mb-2">Claim Submitted</h2>
-                <p className="text-gray-500 text-center mb-6">We'll review your claim and get back to you shortly.</p>
+                <p className="text-muted-foreground text-center mb-6">We'll review your claim and get back to you shortly.</p>
                 <Button onClick={() => navigate("/")}>Back to Home</Button>
             </div>
         );
@@ -82,7 +82,7 @@ export default function WarrantyClaimPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">File Warranty Claim</h1>
-            <p className="text-gray-500 mb-6">Describe the issue and provide evidence</p>
+            <p className="text-muted-foreground mb-6">Describe the issue and provide evidence</p>
 
             <div className="space-y-4">
                 <Card>
@@ -118,7 +118,7 @@ export default function WarrantyClaimPage() {
                             ))}
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                                className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                                 disabled={uploading}
                             >
                                 <Upload className="h-6 w-6" />

@@ -71,7 +71,7 @@ export default function ActiveJobPage() {
     if (!job) {
         return (
             <div className="p-4 text-center py-20">
-                <p className="text-gray-500">Job not found.</p>
+                <p className="text-muted-foreground">Job not found.</p>
             </div>
         );
     }
@@ -85,7 +85,7 @@ export default function ActiveJobPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Active Job</h1>
-            <p className="text-gray-500 mb-6">{job.subServiceName || job.serviceType}</p>
+            <p className="text-muted-foreground mb-6">{job.subServiceName || job.serviceType}</p>
 
             <Card className="mb-6">
                 <CardHeader>
@@ -105,7 +105,7 @@ export default function ActiveJobPage() {
                                     ) : (
                                         <Circle className="h-5 w-5 text-gray-300 shrink-0" />
                                     )}
-                                    <span className={`text-sm ${isCurrent ? "font-medium text-primary" : isCompleted ? "text-green-600" : "text-gray-400"}`}>
+                                    <span className={`text-sm ${isCurrent ? "font-medium text-primary" : isCompleted ? "text-green-600" : "text-muted-foreground"}`}>
                                         {step.label}
                                     </span>
                                 </div>
@@ -123,12 +123,12 @@ export default function ActiveJobPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="bg-gray-100 rounded-lg p-4 text-center">
+                        <div className="bg-muted rounded-lg p-4 text-center">
                             <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
                             <p className="text-sm text-gray-600">
                                 Lat: {workerLocation.lat.toFixed(4)}, Long: {workerLocation.long.toFixed(4)}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">Live tracking active</p>
+                            <p className="text-xs text-muted-foreground mt-1">Live tracking active</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -160,20 +160,20 @@ export default function ActiveJobPage() {
             <Card className="mt-6">
                 <CardContent className="p-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Job ID</span>
+                        <span className="text-muted-foreground">Job ID</span>
                         <span className="font-mono text-xs">{job._id}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Status</span>
+                        <span className="text-muted-foreground">Status</span>
                         <span className="font-medium">{job.status.replace(/_/g, " ")}</span>
                     </div>
                     {job.location?.address && (
                         <div className="flex items-start gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                             <span>{job.location.address}</span>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>Created {new Date(job.createdAt).toLocaleString()}</span>
                     </div>

@@ -87,8 +87,8 @@ export default function OTPLoginPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <Card className="w-[350px]">
+        <div className="flex items-center justify-center min-h-screen bg-muted">
+            <Card className="w-full max-w-sm">
                 <CardHeader>
                     <CardTitle>{step === "email" ? "OTP Login" : "Enter OTP"}</CardTitle>
                     <CardDescription>
@@ -144,7 +144,7 @@ export default function OTPLoginPage() {
                                     type="button"
                                     onClick={onResend}
                                     disabled={cooldown > 0}
-                                    className="text-sm text-blue-500 hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
+                                    className="text-sm text-blue-500 hover:underline disabled:text-muted-foreground disabled:cursor-not-allowed"
                                 >
                                     {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
                                 </button>
@@ -153,10 +153,10 @@ export default function OTPLoginPage() {
                     )}
                 </CardContent>
                 <CardFooter className="flex flex-col gap-2">
-                    <Link to="/login" className="text-sm text-gray-500 hover:underline">
+                    <Link to="/login" className="text-sm text-muted-foreground hover:underline">
                         Back to password login
                     </Link>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                         Join as a professional? <Link to="/register" className="text-blue-500 hover:underline">Register</Link>
                     </p>
                 </CardFooter>

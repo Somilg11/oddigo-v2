@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Job, JobStatus } from '../../jobs/models/Job';
 import { User } from '../../users/models/User';
 import { WorkerProfile } from '../../workers/models/WorkerProfile';
+import { WorkerKYC } from '../../workers/models/WorkerKYC';
 import ServiceFactory from '../../../core/services/service.factory';
 import { MaintenanceService } from '../services/maintenance.service';
 import { KYCService } from '../../workers/services/kyc.service';
@@ -12,6 +13,10 @@ import { Logger } from '../../../config/logger';
 import { AuthRequest } from '../../../core/middlewares/auth.middleware';
 import { ServiceCategory } from '../../services/models/ServiceCategory';
 import { SubService, PricingType } from '../../services/models/SubService';
+import { Banner, BannerType } from '../models/Banner';
+import { Coupon, CouponType } from '../models/Coupon';
+import { UserPoints, PointTransaction, PointTransactionType } from '../../users/models/UserPoints';
+import redis from '../../../config/redis';
 
 export class AdminController {
 
@@ -62,8 +67,11 @@ export class AdminController {
         try {
             const totalUsers = await User.countDocuments();
             const totalJobs = await Job.countDocuments();
-            const totalWorkers = await WorkerProfile.countDocuments();
-            const activeWorkers = await WorkerProfile.countDocuments({ isOnline: true });
+
+            // Only count WorkerProfiles linked to users with role WORKER
+            const workerUserIds = (await User.find({ role: 'WORKER' }).select('_id')).map(u => u._id);
+            const totalWorkers = await WorkerProfile.countDocuments({ user: { $in: workerUserIds } });
+            const activeWorkers = await WorkerProfile.countDocuments({ user: { $in: workerUserIds }, isOnline: true });
 
             const gmvAgg = await Job.aggregate([
                 { $match: { status: JobStatus.COMPLETED } },
@@ -98,18 +106,31 @@ export class AdminController {
         }
     }
 
-    static async getDisputes(_req: AuthRequest, res: Response, next: NextFunction) {
+    static async getDisputes(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const disputes = await Job.find({
+            const { page = '1', limit = '15' } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const query = {
                 status: { $in: [JobStatus.CANCELLED_CHARGED, JobStatus.CANCELLED] }
-            })
-            .populate('customer', 'name email phone')
-            .populate('worker', 'name email phone')
-            .sort({ createdAt: -1 });
+            };
+
+            const [disputes, total] = await Promise.all([
+                Job.find(query)
+                    .populate('customer', 'name email phone')
+                    .populate('worker', 'name email phone')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum),
+                Job.countDocuments(query)
+            ]);
 
             res.status(200).json({
                 success: true,
                 results: disputes.length,
+                pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
                 data: disputes
             });
         } catch (error) {
@@ -122,23 +143,26 @@ export class AdminController {
             const { page = '1', limit = '20', search } = req.query;
             const pageNum = parseInt(page as string);
             const limitNum = parseInt(limit as string);
-            const skip = (pageNum - 1) * limitNum;
 
-            const filter: Record<string, unknown> = {};
+            // Only include profiles linked to users with role WORKER
+            const workerUserIds = (await User.find({ role: 'WORKER' }).select('_id')).map(u => u._id);
+            const filter: Record<string, unknown> = { user: { $in: workerUserIds } };
             if (search) {
                 filter.$or = [
                     { verificationStatus: { $regex: search, $options: 'i' } }
                 ];
             }
 
-            const [workers, total] = await Promise.all([
+            const [allWorkers, total] = await Promise.all([
                 WorkerProfile.find(filter)
                     .populate('user', 'name email phone isActive avatarUrl')
                     .sort({ createdAt: -1 })
-                    .skip(skip)
+                    .skip((pageNum - 1) * limitNum)
                     .limit(limitNum),
                 WorkerProfile.countDocuments(filter)
             ]);
+
+            const workers = allWorkers.filter(w => w.user && (w.user as any).isActive !== false);
 
             res.status(200).json({
                 success: true,
@@ -194,6 +218,8 @@ export class AdminController {
 
     static async getLiveOperations(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
+            const workerUserIds = (await User.find({ role: 'WORKER' }).select('_id')).map(u => u._id);
+
             const busyJobWorkerIds = (await Job.find({
                 status: { $in: [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED, JobStatus.OTP_PENDING] }
             }).select('worker')).map(j => j.worker).filter((w): w is NonNullable<typeof w> => w != null);
@@ -206,14 +232,14 @@ export class AdminController {
                 emergencyJobs
             ] = await Promise.all([
                 Job.countDocuments({ status: { $in: [JobStatus.CREATED, JobStatus.MATCHING] } }),
-                WorkerProfile.countDocuments({ isOnline: true }),
+                WorkerProfile.countDocuments({ user: { $in: workerUserIds }, isOnline: true }),
                 busyJobWorkerIds.length > 0
                     ? WorkerProfile.countDocuments({
                         isOnline: true,
                         user: { $in: busyJobWorkerIds }
                     })
                     : 0,
-                WorkerProfile.countDocuments({ isOnline: false }),
+                WorkerProfile.countDocuments({ user: { $in: workerUserIds }, isOnline: false }),
                 Job.countDocuments({
                     status: { $in: [JobStatus.CREATED, JobStatus.MATCHING] },
                     serviceType: { $in: ['short-circuit-repair', 'power-outage'] }
@@ -327,11 +353,58 @@ export class AdminController {
         }
     }
 
+    static async getWorker(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const profile = await WorkerProfile.findById(req.params.id)
+                .populate('user', 'name email phone isActive avatarUrl');
+            if (!profile) throw new AppError('Worker not found', 404);
+            res.status(200).json({ success: true, data: profile });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getWorkerKYC(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const profile = await WorkerProfile.findById(req.params.id);
+            if (!profile) throw new AppError('Worker not found', 404);
+            const docs = await WorkerKYC.find({ worker: profile.user })
+                .sort({ createdAt: -1 });
+            res.status(200).json({ success: true, data: docs });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async deleteWorker(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const profile = await WorkerProfile.findOne({ user: req.params.id });
+            if (!profile) throw new AppError('Worker not found', 404);
+
+            await User.findByIdAndUpdate(req.params.id, { isActive: false });
+            await profile.deleteOne();
+
+            await redis.zrem('workers:locations', req.params.id);
+
+            res.status(200).json({ success: true, message: 'Worker deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // ─── Service Category CRUD ────────────────────────────────────
 
-    static async getAllCategories(_req: AuthRequest, res: Response, next: NextFunction) {
+    static async getAllCategories(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const categories = await ServiceCategory.find().sort({ sortOrder: 1, name: 1 });
+            const { page = '1', limit = '15' } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const [categories, total] = await Promise.all([
+                ServiceCategory.find().sort({ sortOrder: 1, name: 1 }).skip(skip).limit(limitNum),
+                ServiceCategory.countDocuments()
+            ]);
 
             const categoriesWithCount = await Promise.all(
                 categories.map(async (cat) => {
@@ -340,7 +413,12 @@ export class AdminController {
                 })
             );
 
-            res.status(200).json({ success: true, data: categoriesWithCount });
+            res.status(200).json({
+                success: true,
+                results: categoriesWithCount.length,
+                pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+                data: categoriesWithCount
+            });
         } catch (error) {
             next(error);
         }
@@ -525,6 +603,436 @@ export class AdminController {
 
             await subService.deleteOne();
             res.status(200).json({ success: true, message: 'Sub-service deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Banner CRUD ───────────────────────────────────────────────
+
+    static async getBanners(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { page = '1', limit = '15' } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const [banners, total] = await Promise.all([
+                Banner.find().sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limitNum),
+                Banner.countDocuments()
+            ]);
+
+            res.status(200).json({
+                success: true,
+                results: banners.length,
+                pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+                data: banners
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getActiveBanners(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const now = new Date();
+            const banners = await Banner.find({
+                isActive: true,
+                $and: [
+                    { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+                    { $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] }
+                ]
+            }).sort({ sortOrder: 1 });
+            res.status(200).json({ success: true, data: banners });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createBanner(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                title: z.string().min(1),
+                subtitle: z.string().optional().default(''),
+                imageUrl: z.string().optional().default(''),
+                linkUrl: z.string().optional().default(''),
+                type: z.nativeEnum(BannerType),
+                isActive: z.boolean().optional().default(true),
+                sortOrder: z.number().optional().default(0),
+                startsAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+                expiresAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+            });
+
+            const data = schema.parse(req.body);
+            const banner = await Banner.create({ ...data, createdBy: req.user._id });
+            res.status(201).json({ success: true, data: banner });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async updateBanner(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                title: z.string().min(1).optional(),
+                subtitle: z.string().optional(),
+                imageUrl: z.string().optional(),
+                linkUrl: z.string().optional(),
+                type: z.nativeEnum(BannerType).optional(),
+                isActive: z.boolean().optional(),
+                sortOrder: z.number().optional(),
+                startsAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+                expiresAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+            });
+
+            const data = schema.parse(req.body);
+            const banner = await Banner.findByIdAndUpdate(req.params.id, data, { new: true });
+            if (!banner) throw new AppError('Banner not found', 404);
+            res.status(200).json({ success: true, data: banner });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async deleteBanner(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const banner = await Banner.findByIdAndDelete(req.params.id);
+            if (!banner) throw new AppError('Banner not found', 404);
+            res.status(200).json({ success: true, message: 'Banner deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Coupon CRUD ───────────────────────────────────────────────
+
+    static async getCoupons(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { page = '1', limit = '15' } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const [coupons, total] = await Promise.all([
+                Coupon.find().sort({ createdAt: -1 }).skip(skip).limit(limitNum),
+                Coupon.countDocuments()
+            ]);
+
+            res.status(200).json({
+                success: true,
+                results: coupons.length,
+                pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+                data: coupons
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createCoupon(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                code: z.string().min(3).max(20),
+                description: z.string().min(1),
+                type: z.nativeEnum(CouponType),
+                value: z.number().min(0),
+                minOrderAmount: z.number().min(0).optional(),
+                maxDiscount: z.number().min(0).optional(),
+                usageLimit: z.number().min(0).optional(),
+                perUserLimit: z.number().min(0).optional(),
+                applicableCategories: z.array(z.string()).optional(),
+                isActive: z.boolean().optional().default(true),
+                startsAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+                expiresAt: z.string().optional().transform(v => v ? new Date(v) : undefined),
+            });
+
+            const data = schema.parse(req.body);
+            const existing = await Coupon.findOne({ code: data.code.toUpperCase() });
+            if (existing) throw new AppError('Coupon with this code already exists', 409);
+
+            const coupon = await Coupon.create({ ...data, code: data.code.toUpperCase(), createdBy: req.user._id });
+            res.status(201).json({ success: true, data: coupon });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async updateCoupon(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                code: z.string().min(3).max(20).optional(),
+                description: z.string().min(1).optional(),
+                type: z.nativeEnum(CouponType).optional(),
+                value: z.number().min(0).optional(),
+                minOrderAmount: z.number().min(0).optional().nullable(),
+                maxDiscount: z.number().min(0).optional().nullable(),
+                usageLimit: z.number().min(0).optional().nullable(),
+                perUserLimit: z.number().min(0).optional().nullable(),
+                applicableCategories: z.array(z.string()).optional(),
+                isActive: z.boolean().optional(),
+                startsAt: z.string().optional().transform(v => v ? new Date(v) : undefined).nullable(),
+                expiresAt: z.string().optional().transform(v => v ? new Date(v) : undefined).nullable(),
+            });
+
+            const data = schema.parse(req.body);
+            if (data.code) data.code = data.code.toUpperCase();
+
+            const coupon = await Coupon.findByIdAndUpdate(req.params.id, data, { new: true });
+            if (!coupon) throw new AppError('Coupon not found', 404);
+            res.status(200).json({ success: true, data: coupon });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async deleteCoupon(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const coupon = await Coupon.findByIdAndDelete(req.params.id);
+            if (!coupon) throw new AppError('Coupon not found', 404);
+            res.status(200).json({ success: true, message: 'Coupon deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async validateCoupon(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { code, jobAmount, categoryId } = req.body;
+            if (!code) throw new AppError('Coupon code is required', 400);
+
+            const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+            if (!coupon) throw new AppError('Invalid coupon code', 404);
+            if (!coupon.isActive) throw new AppError('This coupon is no longer active', 400);
+
+            const now = new Date();
+            if (coupon.startsAt && now < coupon.startsAt) throw new AppError('This coupon is not yet valid', 400);
+            if (coupon.expiresAt && now > coupon.expiresAt) throw new AppError('This coupon has expired', 400);
+
+            if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+                throw new AppError('This coupon has reached its usage limit', 400);
+            }
+
+            if (jobAmount && coupon.minOrderAmount && jobAmount < coupon.minOrderAmount) {
+                throw new AppError(`Minimum order amount is ₹${coupon.minOrderAmount}`, 400);
+            }
+
+            if (categoryId && coupon.applicableCategories && coupon.applicableCategories.length > 0) {
+                const matches = coupon.applicableCategories.some(c => c.toString() === categoryId);
+                if (!matches) throw new AppError('This coupon is not applicable for this service', 400);
+            }
+
+            let discount = 0;
+            if (coupon.type === CouponType.PERCENTAGE) {
+                discount = Math.round((jobAmount || 0) * coupon.value / 100);
+                if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+                    discount = coupon.maxDiscount;
+                }
+            } else if (coupon.type === CouponType.FLAT) {
+                discount = coupon.value;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    valid: true,
+                    code: coupon.code,
+                    type: coupon.type,
+                    value: coupon.value,
+                    discount,
+                    description: coupon.description,
+                    message: `Coupon applied! You save ₹${discount}`
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Analytics Endpoints ──────────────────────────────────────
+
+    static async getReferralAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const totalUsers = await User.countDocuments({ role: 'CUSTOMER', isActive: true });
+            const referredUsers = await User.countDocuments({ referredBy: { $exists: true, $ne: null }, role: 'CUSTOMER', isActive: true });
+            const referralRate = totalUsers > 0 ? Math.round((referredUsers / totalUsers) * 100) : 0;
+
+            const topReferrers = await User.aggregate([
+                { $match: { referredBy: { $exists: true, $ne: null } } },
+                { $group: { _id: '$referredBy', count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 10 },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'referrer'
+                    }
+                },
+                { $unwind: '$referrer' },
+                { $project: { name: '$referrer.name', email: '$referrer.email', count: 1 } }
+            ]);
+
+            const monthlyReferrals = await User.aggregate([
+                { $match: { referredBy: { $exists: true, $ne: null } } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: -1 } },
+                { $limit: 6 }
+            ]);
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    totalUsers,
+                    referredUsers,
+                    referralRate,
+                    topReferrers,
+                    monthlyReferrals: monthlyReferrals.reverse()
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getPointsAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const pointsStats = await UserPoints.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalBalance: { $sum: '$balance' },
+                        totalEarned: { $sum: '$lifetimeEarned' },
+                        totalRedeemed: { $sum: '$lifetimeRedeemed' },
+                        usersWithPoints: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            const stats = pointsStats[0] || { totalBalance: 0, totalEarned: 0, totalRedeemed: 0, usersWithPoints: 0 };
+
+            const redemptionCount = await PointTransaction.countDocuments({ type: PointTransactionType.REDEEMED });
+            const uniqueRedeemers = await PointTransaction.distinct('user', { type: PointTransactionType.REDEEMED });
+
+            const earnedByType = await PointTransaction.aggregate([
+                { $match: { type: PointTransactionType.EARNED } },
+                { $group: { _id: '$description', count: { $sum: 1 }, totalPoints: { $sum: '$amount' } } },
+                { $sort: { totalPoints: -1 } }
+            ]);
+
+            const monthlyRedemptions = await PointTransaction.aggregate([
+                { $match: { type: PointTransactionType.REDEEMED } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+                        count: { $sum: 1 },
+                        totalPoints: { $sum: { $abs: '$amount' } }
+                    }
+                },
+                { $sort: { _id: -1 } },
+                { $limit: 6 }
+            ]);
+
+            const discountRupees = Math.floor(stats.totalRedeemed / 100);
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    totalPointsEarned: stats.totalEarned,
+                    totalPointsRedeemed: stats.totalRedeemed,
+                    totalPointsBalance: stats.totalBalance,
+                    totalDiscountRupees: discountRupees,
+                    usersWithPoints: stats.usersWithPoints,
+                    totalRedemptionTransactions: redemptionCount,
+                    uniqueRedeemers: uniqueRedeemers.length,
+                    earnedByType,
+                    monthlyRedemptions: monthlyRedemptions.reverse()
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getCouponAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const couponStats = await Coupon.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalCoupons: { $sum: 1 },
+                        activeCoupons: { $sum: { $cond: ['$isActive', 1, 0] } },
+                        totalUsageCount: { $sum: '$usageCount' }
+                    }
+                }
+            ]);
+
+            const stats = couponStats[0] || { totalCoupons: 0, activeCoupons: 0, totalUsageCount: 0 };
+
+            const jobsWithCoupons = await Job.aggregate([
+                { $match: { couponCode: { $exists: true, $ne: null } } },
+                {
+                    $group: {
+                        _id: null,
+                        totalJobs: { $sum: 1 },
+                        totalDiscount: { $sum: '$discount' }
+                    }
+                }
+            ]);
+
+            const couponStats2 = jobsWithCoupons[0] || { totalJobs: 0, totalDiscount: 0 };
+
+            const topCoupons = await Coupon.find()
+                .sort({ usageCount: -1 })
+                .limit(10)
+                .select('code description type value usageCount usageLimit isActive');
+
+            const couponTypeBreakdown = await Coupon.aggregate([
+                { $group: { _id: '$type', count: { $sum: 1 }, totalUsage: { $sum: '$usageCount' } } }
+            ]);
+
+            const monthlyCouponUsage = await Job.aggregate([
+                { $match: { couponCode: { $exists: true, $ne: null }, status: JobStatus.COMPLETED } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+                        count: { $sum: 1 },
+                        totalDiscount: { $sum: '$discount' }
+                    }
+                },
+                { $sort: { _id: -1 } },
+                { $limit: 6 }
+            ]);
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    totalCoupons: stats.totalCoupons,
+                    activeCoupons: stats.activeCoupons,
+                    totalCouponRedemptions: couponStats2.totalJobs,
+                    totalCouponDiscount: couponStats2.totalDiscount,
+                    topCoupons,
+                    couponTypeBreakdown,
+                    monthlyCouponUsage: monthlyCouponUsage.reverse()
+                }
+            });
         } catch (error) {
             next(error);
         }

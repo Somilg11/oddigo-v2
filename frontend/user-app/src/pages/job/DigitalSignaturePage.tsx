@@ -59,7 +59,7 @@ export default function DigitalSignaturePage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Digital Signature</h1>
-            <p className="text-gray-500 mb-6">Sign below to confirm job completion</p>
+            <p className="text-muted-foreground mb-6">Sign below to confirm job completion</p>
 
             <Card className="mb-6">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">

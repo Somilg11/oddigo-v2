@@ -1,20 +1,22 @@
 # Notification API
 
-## Overview
-Base URL: `/api/notifications`
-**Auth Required**: Yes
+**Base URL:** `/api/notifications`
+**Auth Required:** Yes (any logged-in user)
 
-While real-time updates happen via Socket.io, this API allows retrieving the history of alerts (for "Inbox" view).
+---
 
-## Endpoints
+## 1. GET `/api/notifications?page=1&limit=15`
 
-### 1. Get My Notifications
-Fetch list of past notifications.
+Get paginated notifications for the current user.
 
-- **URL**: `/`
-- **Method**: `GET`
+#### Query Params
 
-#### Response (200 OK)
+| Param | Default |
+|-------|---------|
+| page | 1 |
+| limit | 15 |
+
+#### Response (200)
 ```json
 {
   "success": true,
@@ -23,19 +25,33 @@ Fetch list of past notifications.
       "_id": "60d...",
       "type": "job:offer",
       "title": "New Job Offer!",
-      "message": "New plumbing job available...",
+      "message": "New plumbing job available near sector 62",
       "isRead": false,
-      "createdAt": "2023-10-10T10:00:00Z"
+      "data": { "jobId": "..." },
+      "createdAt": "2026-06-20T10:00:00Z"
+    },
+    {
+      "_id": "60d...",
+      "type": "kyc:approved",
+      "title": "KYC Approved",
+      "message": "Your documents have been verified",
+      "isRead": true,
+      "createdAt": "2026-06-20T08:00:00Z"
     }
-  ]
+  ],
+  "pagination": { "page": 1, "limit": 15, "total": 8, "pages": 1 }
 }
 ```
 
-### 2. Mark as Read
-- **URL**: `/:id/read`
-- **Method**: `PATCH`
+**Notification types:** `job:offer`, `job:assigned`, `job:completed`, `job:cancelled`, `kyc:approved`, `kyc:rejected`, `payment:received`, `warranty:issued`
 
-#### Response (200 OK)
+---
+
+## 2. PATCH `/api/notifications/:id/read`
+
+Mark a single notification as read. No body needed.
+
+#### Response (200)
 ```json
 {
   "success": true,

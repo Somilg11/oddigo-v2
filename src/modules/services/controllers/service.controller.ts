@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ServiceCategory } from '../models/ServiceCategory';
 import { SubService } from '../models/SubService';
+import { Banner } from '../../admin/models/Banner';
 import { AppError } from '../../../core/errors/AppError';
 
 export class ServiceController {
@@ -56,6 +57,22 @@ export class ServiceController {
                 success: true,
                 data: subService
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getActiveBanners(_req: Request, res: Response, next: NextFunction) {
+        try {
+            const now = new Date();
+            const banners = await Banner.find({
+                isActive: true,
+                $and: [
+                    { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+                    { $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] }
+                ]
+            }).sort({ sortOrder: 1 });
+            res.status(200).json({ success: true, data: banners });
         } catch (error) {
             next(error);
         }

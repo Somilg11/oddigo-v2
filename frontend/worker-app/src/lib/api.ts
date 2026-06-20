@@ -12,6 +12,7 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers["x-app-type"] = "WORKER";
     return config;
 });
 
@@ -22,6 +23,10 @@ api.interceptors.response.use(
             localStorage.removeItem("oddigo_worker_token");
             localStorage.removeItem("oddigo_worker_auth");
             window.location.href = "/login";
+        }
+        if (error.response?.status === 503) {
+            window.location.href = "/maintenance";
+            return Promise.reject(error);
         }
         const message = error.response?.data?.message || error.message || "Request failed";
         logger.error("API Error:", message);

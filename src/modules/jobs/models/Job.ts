@@ -105,6 +105,10 @@ export interface IJob extends Document {
     paymentStatus?: PaymentStatus;
     transactionId?: string;
 
+    // Coupon
+    couponCode?: string;
+    discount?: number;
+
     // Warranty
     warrantyId?: mongoose.Types.ObjectId;
 
@@ -194,6 +198,10 @@ const JobSchema: Schema = new Schema({
     paymentMethod: { type: String, enum: Object.values(PaymentMethod) },
     paymentStatus: { type: String, enum: Object.values(PaymentStatus), default: PaymentStatus.PENDING },
     transactionId: String,
+
+    // Coupon
+    couponCode: { type: String },
+    discount: { type: Number, default: 0 },
 
     // Warranty
     warrantyId: { type: Schema.Types.ObjectId, ref: 'Warranty' },

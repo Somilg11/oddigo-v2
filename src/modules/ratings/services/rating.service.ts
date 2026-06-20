@@ -3,6 +3,7 @@ import { Rating, IRating } from '../models/Rating';
 import { Job, JobStatus } from '../../jobs/models/Job';
 import { WorkerProfile } from '../../workers/models/WorkerProfile';
 import { RankingService } from '../../workers/services/ranking.service';
+import { PointsService } from '../../users/services/points.service';
 import { AppError } from '../../../core/errors/AppError';
 import { Logger } from '../../../config/logger';
 
@@ -38,6 +39,15 @@ export class RatingService {
         });
 
         await this.updateWorkerRating(job.worker.toString());
+
+        // Award 5-star rating bonus points
+        if (rating === 5) {
+            try {
+                await PointsService.awardRatingPoints(customerId, jobId);
+            } catch (err) {
+                Logger.error(`Failed to award rating points for job ${jobId}: ${err}`);
+            }
+        }
 
         Logger.info(`Job ${jobId} rated ${rating}/5 by customer ${customerId}`);
         return newRating;

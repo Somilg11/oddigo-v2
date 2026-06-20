@@ -43,8 +43,8 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <Card className="w-[350px]">
+        <div className="flex items-center justify-center min-h-screen bg-muted">
+            <Card className="w-full max-w-sm">
                 <CardHeader className="text-center">
                     <div className="flex justify-center mb-2">
                         <Shield className="h-10 w-10 text-primary" />
@@ -75,7 +75,7 @@ export default function LoginPage() {
                     </form>
                 </CardContent>
                 <CardFooter className="text-center">
-                    <p className="text-xs text-gray-500">Authorized personnel only.</p>
+                    <p className="text-xs text-muted-foreground">Authorized personnel only.</p>
                 </CardFooter>
             </Card>
         </div>

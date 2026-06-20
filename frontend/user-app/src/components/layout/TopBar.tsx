@@ -2,18 +2,20 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
 import { Bell, User } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function TopBar() {
     const navigate = useNavigate();
     const user = useAuthStore((s) => s.user);
 
     return (
-        <header className="bg-white shadow-sm sticky top-0 z-50">
+        <header className="bg-card shadow-sm sticky top-0 z-50">
             <div className="flex items-center justify-between px-4 h-14">
                 <button onClick={() => navigate("/")} className="flex items-center gap-2">
                     <span className="text-xl font-bold text-primary">Oddigo</span>
                 </button>
                 <div className="flex items-center gap-2">
+                    <ThemeToggle />
                     <Button
                         variant="ghost"
                         size="icon"

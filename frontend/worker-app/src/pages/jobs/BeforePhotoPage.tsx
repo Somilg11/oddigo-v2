@@ -55,7 +55,7 @@ export default function BeforePhotoPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Before Photo</h1>
-            <p className="text-gray-500 mb-6">Take a photo of the issue before starting repair</p>
+            <p className="text-muted-foreground mb-6">Take a photo of the issue before starting repair</p>
 
             <Card>
                 <CardContent className="py-8">
@@ -72,7 +72,7 @@ export default function BeforePhotoPage() {
                     ) : (
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                            className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                             disabled={uploading}
                         >
                             <Camera className="h-10 w-10 mb-2" />

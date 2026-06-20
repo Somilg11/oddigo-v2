@@ -49,7 +49,7 @@ export default function LiveOpsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Live Operations</h1>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     Auto-refreshing every 30s
                 </div>
@@ -58,7 +58,7 @@ export default function LiveOpsPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Briefcase className="h-4 w-4" /> Active Jobs
                         </CardTitle>
                     </CardHeader>
@@ -68,7 +68,7 @@ export default function LiveOpsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-4 w-4" /> Pending Requests
                         </CardTitle>
                     </CardHeader>
@@ -78,7 +78,7 @@ export default function LiveOpsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Wifi className="h-4 w-4 text-green-600" /> Workers Online
                         </CardTitle>
                     </CardHeader>
@@ -88,7 +88,7 @@ export default function LiveOpsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500 flex items-center gap-1">
+                        <CardTitle className="text-sm text-muted-foreground flex items-center gap-1">
                             <Users className="h-4 w-4" /> Workers Busy
                         </CardTitle>
                     </CardHeader>
@@ -113,7 +113,7 @@ export default function LiveOpsPage() {
                             <span className="font-bold">{ops?.workersBusy || 0}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-2 text-sm"><WifiOff className="h-4 w-4 text-gray-400" /> Offline</span>
+                            <span className="flex items-center gap-2 text-sm"><WifiOff className="h-4 w-4 text-muted-foreground" /> Offline</span>
                             <span className="font-bold">{ops?.workersOffline || 0}</span>
                         </div>
                     </div>

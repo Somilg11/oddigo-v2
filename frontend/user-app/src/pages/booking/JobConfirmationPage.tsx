@@ -28,7 +28,7 @@ export default function JobConfirmationPage() {
     if (!selectedWorker) {
         return (
             <div className="p-4 text-center py-20">
-                <p className="text-gray-500">No worker selected.</p>
+                <p className="text-muted-foreground">No worker selected.</p>
                 <Button className="mt-4" onClick={() => navigate("/booking/workers")}>
                     Go Back
                 </Button>
@@ -56,7 +56,7 @@ export default function JobConfirmationPage() {
                             </div>
                             <div>
                                 <p className="font-medium text-lg">{selectedWorker.user?.name || "Worker"}</p>
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                     <span>{selectedWorker.avgRating?.toFixed(1) || "N/A"}</span>
                                     <span>•</span>
@@ -80,15 +80,15 @@ export default function JobConfirmationPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Service</span>
+                            <span className="text-muted-foreground">Service</span>
                             <span className="font-medium">{subService?.name || "N/A"}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Estimated Cost</span>
+                            <span className="text-muted-foreground">Estimated Cost</span>
                             <span className="font-medium">~₹{subService?.basePrice || 0}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Estimated Time</span>
+                            <span className="text-muted-foreground">Estimated Time</span>
                             <span className="font-medium">{subService?.estimatedTime || 0} min</span>
                         </div>
                     </CardContent>

@@ -78,12 +78,12 @@ export default function NotificationsPage() {
                             onClick={() => markAsRead(n._id)}
                         >
                             <CardContent className="p-4 flex items-start gap-3">
-                                <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${!n.isRead ? "bg-primary/10" : "bg-gray-100"}`}>
-                                    <Bell className="h-4 w-4 text-gray-500" />
+                                <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${!n.isRead ? "bg-primary/10" : "bg-muted"}`}>
+                                    <Bell className="h-4 w-4 text-muted-foreground" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className={`text-sm ${!n.isRead ? "font-medium" : ""}`}>{n.message || n.title || "Notification"}</p>
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                         {new Date(n.createdAt).toLocaleString()}
                                     </p>
                                 </div>

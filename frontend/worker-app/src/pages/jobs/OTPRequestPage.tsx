@@ -46,7 +46,7 @@ export default function OTPRequestPage() {
                     {sent ? (
                         <div>
                             <p className="text-green-600 font-medium mb-4">OTP sent to customer!</p>
-                            <p className="text-sm text-gray-500 mb-4">
+                            <p className="text-sm text-muted-foreground mb-4">
                                 Ask the customer for the 6-digit OTP they received.
                             </p>
                             <Button onClick={() => navigate(`/jobs/${id}/otp-verify`)}>
@@ -55,7 +55,7 @@ export default function OTPRequestPage() {
                         </div>
                     ) : (
                         <div>
-                            <p className="text-gray-500 mb-4">
+                            <p className="text-muted-foreground mb-4">
                                 Send an OTP to the customer to verify you are at the location.
                             </p>
                             {error && (

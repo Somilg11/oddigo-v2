@@ -40,7 +40,7 @@ export default function RatingPage() {
                     <Star className="h-8 w-8 text-green-600 fill-green-600" />
                 </div>
                 <h2 className="text-xl font-bold mb-2">Thank You!</h2>
-                <p className="text-gray-500 text-center mb-6">Your rating has been submitted.</p>
+                <p className="text-muted-foreground text-center mb-6">Your rating has been submitted.</p>
                 <Button onClick={() => navigate("/")}>Back to Home</Button>
             </div>
         );
@@ -53,7 +53,7 @@ export default function RatingPage() {
             </Button>
 
             <h1 className="text-2xl font-bold mb-2">Rate Your Experience</h1>
-            <p className="text-gray-500 mb-6">How was the service?</p>
+            <p className="text-muted-foreground mb-6">How was the service?</p>
 
             <Card className="mb-6">
                 <CardContent className="py-8">
@@ -75,7 +75,7 @@ export default function RatingPage() {
                             </button>
                         ))}
                     </div>
-                    <p className="text-center text-sm text-gray-500">
+                    <p className="text-center text-sm text-muted-foreground">
                         {rating === 0 && "Tap a star to rate"}
                         {rating === 1 && "Poor"}
                         {rating === 2 && "Fair"}

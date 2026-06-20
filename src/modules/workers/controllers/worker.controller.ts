@@ -65,6 +65,15 @@ export class WorkerController {
         }
     }
 
+    static async submitForVerification(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const result = await KYCService.submitForVerification(req.user._id);
+            res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static async getMyKYC(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const kyc = await KYCService.getWorkerKYC(req.user._id);

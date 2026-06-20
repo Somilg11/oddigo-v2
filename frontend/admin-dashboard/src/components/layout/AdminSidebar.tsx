@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase, Wrench } from "lucide-react";
+import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase, Wrench, Megaphone, Tag } from "lucide-react";
 
 const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
     { path: "/services", label: "Services", icon: Wrench },
+    { path: "/content/banners", label: "Content", icon: Megaphone },
+    { path: "/coupons", label: "Coupons", icon: Tag },
     { path: "/operations/live", label: "Live Operations", icon: Briefcase },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/workers", label: "Workers", icon: Users },
@@ -46,7 +48,7 @@ export function AdminSidebar() {
             )}
 
             <aside
-                className={`fixed top-0 left-0 h-full w-64 bg-white border-r z-40 transform transition-transform duration-200
+                className={`fixed top-0 left-0 h-full w-64 bg-card border-r z-40 transform transition-transform duration-200
                     ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
             >
                 <div className="p-4 border-b">
@@ -65,7 +67,7 @@ export function AdminSidebar() {
                                     setOpen(false);
                                 }}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                                    ${isActive ? "bg-primary/10 text-primary font-medium" : "text-gray-600 hover:bg-gray-100"}`}
+                                    ${isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted"}`}
                             >
                                 <Icon className="h-4 w-4" />
                                 {item.label}
