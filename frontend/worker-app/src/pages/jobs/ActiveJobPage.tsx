@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
+import { openInGoogleMaps } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PageError } from "@/components/common/PageError";
-import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2, Navigation } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2, Navigation, ExternalLink } from "lucide-react";
 import { useWorkerSocket, useLocationUpdates } from "@/hooks/useSocket";
 import type { Job, JobStatus } from "@/types";
 
@@ -73,6 +74,7 @@ export default function ActiveJobPage() {
     }
 
     const currentStep = getStepIndex(job.status);
+    const hasJobLocation = job.location?.coordinates;
 
     return (
         <div className="p-4 max-w-2xl mx-auto">
@@ -88,6 +90,24 @@ export default function ActiveJobPage() {
                     <CardContent className="p-3 flex items-center gap-2">
                         <Navigation className="h-4 w-4 text-green-600 animate-pulse" />
                         <p className="text-sm text-green-700">Location is being shared with the customer</p>
+                    </CardContent>
+                </Card>
+            )}
+
+            {hasJobLocation && (
+                <Card className="mb-4">
+                    <CardContent className="p-3">
+                        <Button
+                            variant="outline"
+                            className="w-full flex items-center gap-2"
+                            onClick={() => {
+                                const coords = job.location.coordinates;
+                                openInGoogleMaps(coords[1], coords[0]);
+                            }}
+                        >
+                            <ExternalLink className="h-4 w-4" />
+                            Navigate to Customer
+                        </Button>
                     </CardContent>
                 </Card>
             )}

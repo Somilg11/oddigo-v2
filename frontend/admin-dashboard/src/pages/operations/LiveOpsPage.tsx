@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
@@ -6,18 +6,28 @@ import { PageError } from "@/components/common/PageError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Wifi, WifiOff, Clock, Briefcase, Users } from "lucide-react";
-import type { LiveOperations } from "@/types";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import type { LiveOperations, WorkerLocation } from "@/types";
 
 export default function LiveOpsPage() {
     const [ops, setOps] = useState<LiveOperations | null>(null);
+    const [workerLocations, setWorkerLocations] = useState<WorkerLocation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<maplibregl.Map | null>(null);
+    const markersRef = useRef<maplibregl.Marker[]>([]);
 
-    const fetchOps = async () => {
+    const fetchData = async () => {
         try {
             setError(null);
-            const response = await api.get("/admin/operations/live");
-            setOps(extractData(response));
+            const [opsRes, locRes] = await Promise.all([
+                api.get("/admin/operations/live"),
+                api.get("/admin/operations/worker-locations"),
+            ]);
+            setOps(extractData(opsRes));
+            setWorkerLocations(extractData(locRes));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to fetch live operations";
             setError(message);
@@ -28,10 +38,67 @@ export default function LiveOpsPage() {
     };
 
     useEffect(() => {
-        fetchOps();
-        const interval = setInterval(fetchOps, 30000);
+        fetchData();
+        const interval = setInterval(fetchData, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (!mapContainer.current || mapRef.current) return;
+
+        const map = new maplibregl.Map({
+            container: mapContainer.current,
+            style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+            center: [77.209, 28.6139],
+            zoom: 11,
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), "top-right");
+        mapRef.current = map;
+
+        return () => {
+            map.remove();
+            mapRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
+
+        workerLocations.forEach((w) => {
+            if (!w.lastLocation) return;
+            const [lng, lat] = w.lastLocation.coordinates;
+            const color = w.status === "busy" ? "#eab308" : "#22c55e";
+
+            const el = document.createElement("div");
+            el.className = "worker-marker";
+            el.style.cssText = `
+                width: 24px; height: 24px; border-radius: 50%;
+                background: ${color}; border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                cursor: pointer;
+            `;
+
+            const name = typeof w.user === "object" && w.user ? w.user.name : "Worker";
+
+            const marker = new maplibregl.Marker({ element: el })
+                .setLngLat([lng, lat])
+                .setPopup(
+                    new maplibregl.Popup({ offset: 15 }).setHTML(
+                        `<div style="padding:4px 0">
+                            <strong>${name}</strong><br/>
+                            <span style="color:${color};font-size:12px">${w.status === "busy" ? "Busy" : "Available"}</span>
+                        </div>`
+                    )
+                )
+                .addTo(mapRef.current!);
+
+            markersRef.current.push(marker);
+        });
+    }, [workerLocations]);
 
     if (loading) {
         return (
@@ -42,7 +109,7 @@ export default function LiveOpsPage() {
     }
 
     if (error) {
-        return <PageError message={error} onRetry={fetchOps} />;
+        return <PageError message={error} onRetry={fetchData} />;
     }
 
     return (
@@ -97,6 +164,23 @@ export default function LiveOpsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Worker Locations</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div ref={mapContainer} className="h-[400px] w-full" />
+                    <div className="px-4 py-2 border-t flex gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                            <div className="h-2.5 w-2.5 rounded-full bg-green-500" /> Available
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" /> Busy
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>

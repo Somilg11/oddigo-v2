@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase, Wrench, Megaphone, Tag } from "lucide-react";
+import { LogOut, Menu, X, LayoutDashboard, Users, AlertTriangle, BarChart3, Settings, Shield, Briefcase, Wrench, Megaphone, Tag, UserCheck } from "lucide-react";
 
 const navItems = [
     { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const navItems = [
     { path: "/workers/verification", label: "Pending Verification", icon: Shield },
     { path: "/complaints", label: "Complaints", icon: AlertTriangle },
     { path: "/disputes", label: "Disputes", icon: AlertTriangle },
+    { path: "/executives", label: "Executives", icon: UserCheck },
     { path: "/settings", label: "Settings", icon: Settings },
 ];
 

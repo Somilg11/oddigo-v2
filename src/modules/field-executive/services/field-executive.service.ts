@@ -9,7 +9,7 @@ import { Logger } from '../../../config/logger';
 export class FieldExecutiveService {
 
     static async getAssignedWorkers(executiveId: string) {
-        const profile = await FieldExecutiveProfile.findOne({ user: executiveId });
+        const profile = await FieldExecutiveProfile.findOne({ user: executiveId }).populate('assignedZone', 'name city');
         if (!profile) throw new AppError('Field executive profile not found', 404);
 
         const workers = await WorkerProfile.find({
@@ -58,13 +58,43 @@ export class FieldExecutiveService {
         };
     }
 
+    static async getVisits(executiveId: string, page: number = 1, limit: number = 20) {
+        const skip = (page - 1) * limit;
+
+        const [visits, total] = await Promise.all([
+            FieldVisit.find({ fieldExecutive: executiveId })
+                .populate('worker', 'name phone')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            FieldVisit.countDocuments({ fieldExecutive: executiveId })
+        ]);
+
+        return {
+            visits,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        };
+    }
+
     static async logFieldVisit(executiveId: string, workerId: string, data: {
         type: 'CHECK_IN' | 'FOLLOW_UP' | 'QUALITY_AUDIT' | 'COMPLAINT_HANDLE';
         notes: string;
         photos?: string[];
         location?: { lat: number; long: number };
     }) {
-        const visitData: any = {
+        const profile = await FieldExecutiveProfile.findOne({ user: executiveId });
+        if (!profile) throw new AppError('Field executive profile not found', 404);
+
+        if (!profile.managedWorkers.includes(workerId as any)) {
+            throw new AppError('Worker not assigned to this field executive', 403);
+        }
+
+        const visitData: Record<string, unknown> = {
             fieldExecutive: executiveId,
             worker: workerId,
             type: data.type,

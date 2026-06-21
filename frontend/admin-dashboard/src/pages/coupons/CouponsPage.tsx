@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Plus, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const couponTypes = ["PERCENTAGE", "FLAT", "FREE_DELIVERY"] as const;
 
@@ -43,8 +47,8 @@ export default function CouponsPage() {
         usageLimit: "",
         perUserLimit: "",
         isActive: true,
-        startsAt: "",
-        expiresAt: "",
+        startsAt: undefined as Date | undefined,
+        expiresAt: undefined as Date | undefined,
     });
 
     const fetchCoupons = useCallback(async () => {
@@ -78,8 +82,8 @@ export default function CouponsPage() {
             usageLimit: "",
             perUserLimit: "",
             isActive: true,
-            startsAt: "",
-            expiresAt: "",
+            startsAt: undefined,
+            expiresAt: undefined,
         });
         setFormOpen(true);
     };
@@ -96,8 +100,8 @@ export default function CouponsPage() {
             usageLimit: coupon.usageLimit?.toString() || "",
             perUserLimit: coupon.perUserLimit?.toString() || "",
             isActive: coupon.isActive,
-            startsAt: coupon.startsAt ? coupon.startsAt.slice(0, 16) : "",
-            expiresAt: coupon.expiresAt ? coupon.expiresAt.slice(0, 16) : "",
+            startsAt: coupon.startsAt ? new Date(coupon.startsAt) : undefined,
+            expiresAt: coupon.expiresAt ? new Date(coupon.expiresAt) : undefined,
         });
         setFormOpen(true);
     };
@@ -116,8 +120,8 @@ export default function CouponsPage() {
             if (form.maxDiscount) payload.maxDiscount = parseFloat(form.maxDiscount);
             if (form.usageLimit) payload.usageLimit = parseInt(form.usageLimit);
             if (form.perUserLimit) payload.perUserLimit = parseInt(form.perUserLimit);
-            if (form.startsAt) payload.startsAt = form.startsAt;
-            if (form.expiresAt) payload.expiresAt = form.expiresAt;
+            if (form.startsAt) payload.startsAt = form.startsAt.toISOString();
+            if (form.expiresAt) payload.expiresAt = form.expiresAt.toISOString();
 
             if (editingCoupon) {
                 await api.patch(`/admin/coupons/${editingCoupon._id}`, payload);
@@ -338,21 +342,55 @@ export default function CouponsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Starts At</Label>
-                                <Input
-                                    type="datetime-local"
-                                    value={form.startsAt}
-                                    onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !form.startsAt && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {form.startsAt ? format(form.startsAt, "PPP") : "Pick a date"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={form.startsAt}
+                                            onSelect={(date) => setForm({ ...form, startsAt: date })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Expires At</Label>
-                                <Input
-                                    type="datetime-local"
-                                    value={form.expiresAt}
-                                    onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !form.expiresAt && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {form.expiresAt ? format(form.expiresAt, "PPP") : "Pick a date"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={form.expiresAt}
+                                            onSelect={(date) => setForm({ ...form, expiresAt: date })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="flex items-center gap-2 pt-6">
                                 <Switch

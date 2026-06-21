@@ -200,6 +200,7 @@ export interface DashboardStats {
     totalWorkers: number;
     activeWorkers: number;
     totalCustomers: number;
+    totalExecutives: number;
     pendingApprovals: number;
     openComplaints: number;
 }
@@ -215,15 +216,21 @@ export interface Notification {
     updatedAt: string;
 }
 
+export type ComplaintStatus = "OPEN" | "IN_REVIEW" | "ESCALATED" | "RESOLVED" | "CLOSED";
+
 export interface Complaint {
     _id: string;
     customer: User | string;
     worker?: User | string;
     job?: Job | string;
+    category: string;
     description: string;
-    status: "OPEN" | "IN_REVIEW" | "ESCALATED" | "RESOLVED" | "CLOSED";
+    photos: string[];
+    status: ComplaintStatus;
+    priority: string;
     resolution?: string;
     refundAmount?: number;
+    resolvedAt?: string;
     createdAt: string;
     updatedAt: string;
 }

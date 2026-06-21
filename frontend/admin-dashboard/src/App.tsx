@@ -16,6 +16,7 @@ import ServicesListPage from "./pages/services/ServicesListPage";
 import CategoryDetailPage from "./pages/services/CategoryDetailPage";
 import BannersPage from "./pages/content/BannersPage";
 import CouponsPage from "./pages/coupons/CouponsPage";
+import ExecutivesManagementPage from "./pages/executives/ExecutivesManagementPage";
 import { useAuthStore } from "./store/auth.store";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -46,6 +47,7 @@ function App() {
                     <Route path="/complaints" element={<ComplaintsListPage />} />
                     <Route path="/complaints/:id" element={<ComplaintDetailPage />} />
                     <Route path="/disputes" element={<DisputesPage />} />
+                    <Route path="/executives" element={<ExecutivesManagementPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 

@@ -9,9 +9,11 @@ router.use(protect);
 router.use(restrictTo(UserRole.CITY_MANAGER));
 
 router.get('/dashboard', CityManagerController.getDashboard);
+router.get('/overview', CityManagerController.getOverview);
 router.get('/zones', CityManagerController.getZones);
 router.post('/zones', CityManagerController.createZone);
-router.post('/categories', CityManagerController.addCategory);
+router.get('/campaigns', CityManagerController.getCampaigns);
 router.post('/campaigns', CityManagerController.createCampaign);
+router.post('/categories', CityManagerController.addCategory);
 
 export default router;

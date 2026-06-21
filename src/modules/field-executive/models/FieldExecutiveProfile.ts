@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IUser } from '../../users/models/User';
+import { IZone } from '../../zones/models/Zone';
 
 export interface IFieldExecutiveProfile extends Document {
     user: IUser['_id'];
-    assignedZone: string;
+    assignedZone: IZone['_id'];
     managedWorkers: IUser['_id'][];
     createdAt: Date;
     updatedAt: Date;
@@ -11,7 +12,7 @@ export interface IFieldExecutiveProfile extends Document {
 
 const FieldExecutiveProfileSchema: Schema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    assignedZone: { type: String, required: true },
+    assignedZone: { type: Schema.Types.ObjectId, ref: 'Zone', required: true },
     managedWorkers: [{ type: Schema.Types.ObjectId, ref: 'User' }]
 }, {
     timestamps: true

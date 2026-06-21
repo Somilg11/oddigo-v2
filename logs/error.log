@@ -30,3 +30,94 @@
 2026-06-20 12:16:36:1636 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
 2026-06-20 12:16:41:1641 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
 2026-06-20 12:16:41:1641 [31merror[39m: [31m404 - Worker not found - /api/admin/workers/6a35a2ade9cf2a51d928d7b1 - GET - ::1[39m
+2026-06-21 23:06:33:633 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:33:633 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:34:634 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:34:634 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:35:635 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:36:636 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:37:637 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:39:639 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:40:640 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:42:642 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:44:644 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:46:646 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:49:649 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:51:651 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:54:654 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:06:57:657 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:00:70 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:04:74 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:07:77 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:11:711 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:15:715 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:19:719 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:24:724 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:28:728 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:33:733 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:38:738 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:43:743 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:48:748 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:53:753 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:07:58:758 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:03:83 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:08:88 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:13:813 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:18:818 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:23:823 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:28:828 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:33:833 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:37:837 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
+2026-06-21 23:08:38:838 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:43:843 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:48:848 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:53:853 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:08:58:858 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:03:93 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:08:98 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:13:913 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:18:918 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:23:923 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:28:928 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:33:933 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:38:938 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:43:943 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:48:948 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:48:948 [31merror[39m: [31m500 - Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details. - /api/admin/health - GET - ::1[39m
+2026-06-21 23:09:53:953 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:09:58:958 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:03:103 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:08:108 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:08:108 [31merror[39m: [31m500 - Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details. - /api/admin/health - GET - ::1[39m
+2026-06-21 23:10:13:1013 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:18:1018 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:23:1023 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:28:1028 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:33:1033 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:38:1038 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:43:1043 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:48:1048 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:53:1053 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:10:58:1058 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:03:113 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:08:118 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:13:1113 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:18:1118 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:23:1123 [31merror[39m: [31mRedis error: [39m
+2026-06-21 23:11:28:1128 [31merror[39m: [31mRedis error: [39m
+2026-06-22 00:13:07:137 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
+2026-06-22 00:13:41:1341 [31merror[39m: [31m401 - Invalid credentials - /api/auth/login - POST - ::1[39m
+2026-06-22 00:20:24:2024 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:20:24:2024 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:20:35:2035 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:20:35:2035 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:28:2928 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:28:2928 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:46:2946 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:46:2946 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:49:2949 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:29:49:2949 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:31:04:314 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:31:04:314 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:37:57:3757 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m
+2026-06-22 00:37:57:3757 [31merror[39m: [31m403 - You do not have permission to perform this action - /api/zone-manager/zones - GET - ::1[39m

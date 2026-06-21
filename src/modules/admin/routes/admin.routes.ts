@@ -25,9 +25,11 @@ router.post('/workers/bulk-verify', AdminController.bulkVerify);
 
 // Live Operations
 router.get('/operations/live', AdminController.getLiveOperations);
+router.get('/operations/worker-locations', AdminController.getWorkerLocations);
 
 // Complaint Management
 router.get('/complaints', AdminController.getComplaints);
+router.get('/complaints/:id', AdminController.getComplaintById);
 router.post('/complaints/:id/resolve', AdminController.resolveComplaint);
 
 // Service Management
@@ -57,5 +59,14 @@ router.delete('/coupons/:id', AdminController.deleteCoupon);
 router.get('/analytics/referrals', AdminController.getReferralAnalytics);
 router.get('/analytics/points', AdminController.getPointsAnalytics);
 router.get('/analytics/coupons', AdminController.getCouponAnalytics);
+
+// Executives Management
+router.get('/zones/list', AdminController.getAllZones);
+router.post('/zones', AdminController.createZone);
+router.get('/executives', AdminController.getExecutives);
+router.post('/executives', AdminController.createExecutive);
+router.patch('/executives/:id', AdminController.updateExecutive);
+router.patch('/executives/:id/deactivate', AdminController.deactivateExecutive);
+router.delete('/executives/:id', AdminController.deleteExecutive);
 
 export default router;

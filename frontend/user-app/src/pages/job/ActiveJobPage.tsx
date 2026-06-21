@@ -1,14 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { extractData } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
+import { calculateDistance, estimateETA, formatDistance, formatETA } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { PageError } from "@/components/common/PageError";
-import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CheckCircle, Circle, Loader2, Navigation } from "lucide-react";
 import { useActiveJobSocket, useWorkerTracking } from "@/hooks/useSocket";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { Job, JobStatus } from "@/types";
 
 const statusSteps: { status: JobStatus; label: string }[] = [
@@ -28,6 +31,9 @@ export default function ActiveJobPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [workerLocation, setWorkerLocation] = useState<{ lat: number; long: number } | null>(null);
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<maplibregl.Map | null>(null);
+    const workerMarkerRef = useRef<maplibregl.Marker | null>(null);
 
     const fetchJob = useCallback(async () => {
         if (!id) return;
@@ -54,7 +60,58 @@ export default function ActiveJobPage() {
     useActiveJobSocket(id || null);
     useWorkerTracking(id || null, handleWorkerLocation);
 
+    useEffect(() => {
+        if (!workerLocation || !mapContainer.current || mapRef.current) return;
+
+        const jobCoords = job?.location?.coordinates;
+        const center: [number, number] = jobCoords
+            ? [jobCoords[0], jobCoords[1]]
+            : [workerLocation.long, workerLocation.lat];
+
+        const map = new maplibregl.Map({
+            container: mapContainer.current,
+            style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+            center,
+            zoom: 14,
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+        new maplibregl.Marker({ color: "#ef4444" })
+            .setLngLat(center)
+            .setPopup(new maplibregl.Popup().setText(job?.location?.address || "Job location"))
+            .addTo(map);
+
+        const wMarker = new maplibregl.Marker({ color: "#000" })
+            .setLngLat([workerLocation.long, workerLocation.lat])
+            .setPopup(new maplibregl.Popup().setText("Worker location"))
+            .addTo(map);
+
+        workerMarkerRef.current = wMarker;
+        mapRef.current = map;
+
+        return () => {
+            map.remove();
+            mapRef.current = null;
+        };
+    }, [workerLocation, job]);
+
+    useEffect(() => {
+        if (!mapRef.current || !workerLocation) return;
+        workerMarkerRef.current?.setLngLat([workerLocation.long, workerLocation.lat]);
+    }, [workerLocation]);
+
     const getStepIndex = (status: JobStatus) => statusSteps.findIndex((s) => s.status === status);
+
+    const distanceInfo = workerLocation && job?.location?.coordinates
+        ? (() => {
+            const dist = calculateDistance(
+                workerLocation.lat, workerLocation.long,
+                job.location.coordinates[1], job.location.coordinates[0]
+            );
+            return { distance: dist, eta: estimateETA(dist) };
+        })()
+        : null;
 
     if (loading) {
         return (
@@ -77,6 +134,7 @@ export default function ActiveJobPage() {
     }
 
     const currentStep = getStepIndex(job.status);
+    const showMap = workerLocation && (job.status === "IN_PROGRESS" || job.status === "OTP_PENDING");
 
     return (
         <div className="p-4 max-w-2xl mx-auto">
@@ -115,21 +173,28 @@ export default function ActiveJobPage() {
                 </CardContent>
             </Card>
 
-            {workerLocation && (job.status === "IN_PROGRESS" || job.status === "OTP_PENDING") && (
+            {showMap && (
                 <Card className="mb-6">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-primary" /> Worker Live Location
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="bg-muted rounded-lg p-4 text-center">
-                            <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">
-                                Lat: {workerLocation.lat.toFixed(4)}, Long: {workerLocation.long.toFixed(4)}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">Live tracking active</p>
-                        </div>
+                    <CardContent className="p-0">
+                        <div ref={mapContainer} className="h-64 w-full rounded-b-lg" />
+                        {distanceInfo && (
+                            <div className="px-4 py-3 border-t flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1.5">
+                                    <Navigation className="h-4 w-4 text-primary" />
+                                    <span className="font-medium">{formatDistance(distanceInfo.distance)}</span>
+                                    <span className="text-muted-foreground">away</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <span>ETA ~{formatETA(distanceInfo.eta)}</span>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}

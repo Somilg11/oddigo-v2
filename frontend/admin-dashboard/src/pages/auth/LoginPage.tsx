@@ -49,8 +49,8 @@ export default function LoginPage() {
                     <div className="flex justify-center mb-2">
                         <Shield className="h-10 w-10 text-primary" />
                     </div>
-                    <CardTitle>Admin Panel</CardTitle>
-                    <CardDescription>Sign in to access the admin dashboard.</CardDescription>
+                    <CardTitle>Oddigo Management</CardTitle>
+                    <CardDescription>Sign in to access the dashboard.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit(onSubmit)}>

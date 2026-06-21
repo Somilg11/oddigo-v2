@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const bannerTypes = ["PROMOTION", "ANNOUNCEMENT", "COUPON", "INFO"] as const;
 
@@ -41,8 +45,8 @@ export default function BannersPage() {
         type: "PROMOTION" as Banner["type"],
         isActive: true,
         sortOrder: 0,
-        startsAt: "",
-        expiresAt: "",
+        startsAt: undefined as Date | undefined,
+        expiresAt: undefined as Date | undefined,
     });
 
     const fetchBanners = useCallback(async () => {
@@ -76,8 +80,8 @@ export default function BannersPage() {
             type: "PROMOTION",
             isActive: true,
             sortOrder: 0,
-            startsAt: "",
-            expiresAt: "",
+            startsAt: undefined,
+            expiresAt: undefined,
         });
         setFormOpen(true);
     };
@@ -92,8 +96,8 @@ export default function BannersPage() {
             type: banner.type,
             isActive: banner.isActive,
             sortOrder: banner.sortOrder,
-            startsAt: banner.startsAt ? banner.startsAt.slice(0, 16) : "",
-            expiresAt: banner.expiresAt ? banner.expiresAt.slice(0, 16) : "",
+            startsAt: banner.startsAt ? new Date(banner.startsAt) : undefined,
+            expiresAt: banner.expiresAt ? new Date(banner.expiresAt) : undefined,
         });
         setFormOpen(true);
     };
@@ -110,8 +114,8 @@ export default function BannersPage() {
                 isActive: form.isActive,
                 sortOrder: form.sortOrder,
             };
-            if (form.startsAt) payload.startsAt = form.startsAt;
-            if (form.expiresAt) payload.expiresAt = form.expiresAt;
+            if (form.startsAt) payload.startsAt = form.startsAt.toISOString();
+            if (form.expiresAt) payload.expiresAt = form.expiresAt.toISOString();
 
             if (editingBanner) {
                 await api.patch(`/admin/banners/${editingBanner._id}`, payload);
@@ -309,19 +313,53 @@ export default function BannersPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Starts At</Label>
-                                <Input
-                                    type="datetime-local"
-                                    value={form.startsAt}
-                                    onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !form.startsAt && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {form.startsAt ? format(form.startsAt, "PPP") : "Pick a date"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={form.startsAt}
+                                            onSelect={(date) => setForm({ ...form, startsAt: date })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 <Label>Expires At</Label>
-                                <Input
-                                    type="datetime-local"
-                                    value={form.expiresAt}
-                                    onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !form.expiresAt && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {form.expiresAt ? format(form.expiresAt, "PPP") : "Pick a date"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={form.expiresAt}
+                                            onSelect={(date) => setForm({ ...form, expiresAt: date })}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">

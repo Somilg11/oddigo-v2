@@ -1,7 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { Job, JobStatus } from '../../jobs/models/Job';
-import { User } from '../../users/models/User';
+import { User, UserRole } from '../../users/models/User';
 import { WorkerProfile } from '../../workers/models/WorkerProfile';
 import { WorkerKYC } from '../../workers/models/WorkerKYC';
 import ServiceFactory from '../../../core/services/service.factory';
@@ -16,6 +17,10 @@ import { SubService, PricingType } from '../../services/models/SubService';
 import { Banner, BannerType } from '../models/Banner';
 import { Coupon, CouponType } from '../models/Coupon';
 import { UserPoints, PointTransaction, PointTransactionType } from '../../users/models/UserPoints';
+import { ZoneManagerProfile } from '../../zones/models/ZoneManagerProfile';
+import { CityManagerProfile } from '../../city-manager/models/CityManagerProfile';
+import { FieldExecutiveProfile } from '../../field-executive/models/FieldExecutiveProfile';
+import { Zone } from '../../zones/models/Zone';
 import redis from '../../../config/redis';
 
 export class AdminController {
@@ -65,7 +70,7 @@ export class AdminController {
 
     static async getAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const totalUsers = await User.countDocuments();
+            const totalCustomers = await User.countDocuments({ role: 'CUSTOMER' });
             const totalJobs = await Job.countDocuments();
 
             // Only count WorkerProfiles linked to users with role WORKER
@@ -73,11 +78,16 @@ export class AdminController {
             const totalWorkers = await WorkerProfile.countDocuments({ user: { $in: workerUserIds } });
             const activeWorkers = await WorkerProfile.countDocuments({ user: { $in: workerUserIds }, isOnline: true });
 
+            const activeJobs = await Job.countDocuments({
+                status: { $in: [JobStatus.MATCHING, JobStatus.ACCEPTED, JobStatus.IN_PROGRESS, JobStatus.OTP_PENDING, JobStatus.ON_SITE_DIAGNOSIS, JobStatus.REPAIR_IN_PROGRESS] }
+            });
+            const completedJobs = await Job.countDocuments({ status: JobStatus.COMPLETED });
+
             const gmvAgg = await Job.aggregate([
                 { $match: { status: JobStatus.COMPLETED } },
                 { $group: { _id: null, total: { $sum: '$finalQuote' } } }
             ]);
-            const gmv = gmvAgg[0]?.total || 0;
+            const totalRevenue = gmvAgg[0]?.total || 0;
 
             const monthlyGmvAgg = await Job.aggregate([
                 {
@@ -89,14 +99,23 @@ export class AdminController {
                 { $group: { _id: null, total: { $sum: '$finalQuote' }, count: { $sum: 1 } } }
             ]);
 
+            const pendingApprovals = await WorkerKYC.countDocuments({ verificationStatus: 'PENDING' });
+            const openComplaints = await Complaint.countDocuments({ status: { $in: ['OPEN', 'IN_REVIEW', 'ESCALATED'] } });
+            const totalExecutives = await User.countDocuments({ role: { $in: [UserRole.ZONE_MANAGER, UserRole.CITY_MANAGER, UserRole.FIELD_EXECUTIVE] } });
+
             res.status(200).json({
                 success: true,
                 data: {
-                    totalUsers,
                     totalJobs,
+                    activeJobs,
+                    completedJobs,
+                    totalRevenue,
                     totalWorkers,
                     activeWorkers,
-                    gmv,
+                    totalCustomers,
+                    totalExecutives,
+                    pendingApprovals,
+                    openComplaints,
                     monthlyRevenue: monthlyGmvAgg[0]?.total || 0,
                     monthlyJobs: monthlyGmvAgg[0]?.count || 0
                 }
@@ -108,23 +127,41 @@ export class AdminController {
 
     static async getDisputes(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const { page = '1', limit = '15' } = req.query;
+            const { page = '1', limit = '15', search: rawSearch, status } = req.query;
+            const search = rawSearch as string | undefined;
             const pageNum = parseInt(page as string);
             const limitNum = parseInt(limit as string);
             const skip = (pageNum - 1) * limitNum;
 
-            const query = {
+            const filter: Record<string, unknown> = {
                 status: { $in: [JobStatus.CANCELLED_CHARGED, JobStatus.CANCELLED] }
             };
 
+            if (status && (status === JobStatus.CANCELLED_CHARGED || status === JobStatus.CANCELLED)) {
+                filter.status = status;
+            }
+
+            if (search) {
+                const searchRegex = { $regex: search, $options: 'i' };
+                const matchingCustomerIds = (await User.find({ name: searchRegex }).select('_id')).map(u => u._id);
+                const matchingWorkerIds = (await User.find({ name: searchRegex }).select('_id')).map(u => u._id);
+                filter.$or = [
+                    { subServiceName: searchRegex },
+                    { serviceType: searchRegex },
+                    { 'location.address': searchRegex },
+                    { customer: { $in: matchingCustomerIds } },
+                    { worker: { $in: matchingWorkerIds } }
+                ];
+            }
+
             const [disputes, total] = await Promise.all([
-                Job.find(query)
+                Job.find(filter)
                     .populate('customer', 'name email phone')
                     .populate('worker', 'name email phone')
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limitNum),
-                Job.countDocuments(query)
+                Job.countDocuments(filter)
             ]);
 
             res.status(200).json({
@@ -263,7 +300,8 @@ export class AdminController {
 
     static async getComplaints(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const { status, page = '1', limit = '20' } = req.query;
+            const { status, search: rawSearch, page = '1', limit = '20' } = req.query;
+            const search = rawSearch as string | undefined;
             const pageNum = parseInt(page as string);
             const limitNum = parseInt(limit as string);
             const skip = (pageNum - 1) * limitNum;
@@ -271,11 +309,23 @@ export class AdminController {
             const filter: Record<string, unknown> = {};
             if (status) filter.status = status;
 
+            if (search) {
+                const searchRegex = { $regex: search, $options: 'i' };
+                const matchingCustomerIds = (await User.find({ name: searchRegex }).select('_id')).map(u => u._id);
+                const matchingWorkerIds = (await User.find({ name: searchRegex }).select('_id')).map(u => u._id);
+                filter.$or = [
+                    { description: searchRegex },
+                    { category: searchRegex },
+                    { customer: { $in: matchingCustomerIds } },
+                    { worker: { $in: matchingWorkerIds } }
+                ];
+            }
+
             const [complaints, total] = await Promise.all([
                 Complaint.find(filter)
                     .populate('customer', 'name email phone')
                     .populate('worker', 'name email phone')
-                    .populate('job', 'serviceType status')
+                    .populate('job', 'serviceType subServiceName status finalQuote')
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limitNum),
@@ -293,6 +343,19 @@ export class AdminController {
                 },
                 data: complaints
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getComplaintById(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const complaint = await Complaint.findById(req.params.id)
+                .populate('customer', 'name email phone avatarUrl')
+                .populate('worker', 'name email phone avatarUrl')
+                .populate('job', 'serviceType subServiceName status finalQuote visitFee location scheduledAt completedAt');
+            if (!complaint) throw new AppError('Complaint not found', 404);
+            res.status(200).json({ success: true, data: complaint });
         } catch (error) {
             next(error);
         }
@@ -387,6 +450,32 @@ export class AdminController {
             await redis.zrem('workers:locations', req.params.id);
 
             res.status(200).json({ success: true, message: 'Worker deleted' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Worker Locations for Live Ops Map ────────────────────────
+
+    static async getWorkerLocations(_req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const workers = await WorkerProfile.find({ isOnline: true })
+                .populate('user', 'name phone')
+                .select('user lastLocation wilsonScore isOnline');
+
+            const busyJobWorkerIds = (await Job.find({
+                status: { $in: [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED, JobStatus.OTP_PENDING] }
+            }).select('worker')).map(j => j.worker).filter((w): w is NonNullable<typeof w> => w != null);
+
+            const workerLocations = workers.map(w => ({
+                _id: w._id,
+                user: w.user,
+                lastLocation: w.lastLocation,
+                wilsonScore: w.wilsonScore,
+                status: busyJobWorkerIds.includes(w.user as any) ? 'busy' : 'available'
+            }));
+
+            res.status(200).json({ success: true, data: workerLocations });
         } catch (error) {
             next(error);
         }
@@ -1033,6 +1122,278 @@ export class AdminController {
                     monthlyCouponUsage: monthlyCouponUsage.reverse()
                 }
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // ─── Executives Management ──────────────────────────────────
+
+    static async getAllZones(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { city } = req.query;
+            const filter: Record<string, unknown> = {};
+            if (city) filter.city = city;
+            const zones = await Zone.find(filter).select('name city center radiusKm _id').sort({ city: 1, name: 1 });
+            res.status(200).json({ success: true, data: zones });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createZone(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(1),
+                city: z.string().min(1),
+                lat: z.number().optional().default(28.6139),
+                long: z.number().optional().default(77.209),
+                radiusKm: z.number().optional().default(5),
+            });
+            const data = schema.parse(req.body);
+
+            const zoneName = data.name.startsWith(`${data.city} -`) || data.name.startsWith(`${data.city}-`)
+                ? data.name
+                : `${data.city} - ${data.name}`;
+
+            const zone = await Zone.create({
+                name: zoneName,
+                city: data.city,
+                center: { type: 'Point', coordinates: [data.long, data.lat] },
+                radiusKm: data.radiusKm,
+            });
+
+            Logger.info(`Zone created by admin: ${zone.name} in ${zone.city}`);
+            res.status(201).json({ success: true, data: zone });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getExecutives(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { role, page = '1', limit = '20', search } = req.query;
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+            const skip = (pageNum - 1) * limitNum;
+
+            const validRoles = [UserRole.ZONE_MANAGER, UserRole.CITY_MANAGER, UserRole.FIELD_EXECUTIVE];
+            const filterRoles = role ? [role as UserRole] : validRoles;
+
+            const userFilter: Record<string, unknown> = { role: { $in: filterRoles } };
+            if (search) {
+                userFilter.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } },
+                    { phone: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            const [users, total] = await Promise.all([
+                User.find(userFilter)
+                    .select('name email phone role isActive createdAt')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limitNum),
+                User.countDocuments(userFilter)
+            ]);
+
+            const userIds = users.map(u => u._id);
+
+            const [zoneProfiles, cityProfiles, fieldProfiles] = await Promise.all([
+                ZoneManagerProfile.find({ user: { $in: userIds } }).populate('assignedZones', 'name city'),
+                CityManagerProfile.find({ user: { $in: userIds } }),
+                FieldExecutiveProfile.find({ user: { $in: userIds } }).populate('assignedZone', 'name city')
+            ]);
+
+            const profileMap = new Map<string, unknown>();
+            zoneProfiles.forEach(p => profileMap.set(p.user.toString(), p));
+            cityProfiles.forEach(p => profileMap.set(p.user.toString(), p));
+            fieldProfiles.forEach(p => profileMap.set(p.user.toString(), p));
+
+            const executives = users.map(u => ({
+                ...u.toObject(),
+                profile: profileMap.get(u._id.toString()) || null
+            }));
+
+            res.status(200).json({
+                success: true,
+                results: executives.length,
+                pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
+                data: executives
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createExecutive(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const schema = z.object({
+                name: z.string().min(2),
+                email: z.string().email(),
+                phone: z.string().min(10),
+                password: z.string().min(6),
+                role: z.enum([UserRole.ZONE_MANAGER, UserRole.CITY_MANAGER, UserRole.FIELD_EXECUTIVE]),
+                assignedZones: z.array(z.string()).optional(),
+                assignedCities: z.array(z.string()).optional(),
+                assignedZone: z.string().optional(),
+            });
+
+            const data = schema.parse(req.body);
+
+            const existingUser = await User.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });
+            if (existingUser) throw new AppError('User with this email or phone already exists', 409);
+
+            const hashedPassword = await bcrypt.hash(data.password, 12);
+
+            const user = await User.create({
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                password: hashedPassword,
+                role: data.role,
+                isActive: true
+            });
+
+            if (data.role === UserRole.ZONE_MANAGER) {
+                await ZoneManagerProfile.create({
+                    user: user._id,
+                    assignedZones: data.assignedZones || []
+                });
+            } else if (data.role === UserRole.CITY_MANAGER) {
+                await CityManagerProfile.create({
+                    user: user._id,
+                    assignedCities: data.assignedCities || []
+                });
+            } else             if (data.role === UserRole.FIELD_EXECUTIVE) {
+                if (!data.assignedZone) throw new AppError('assignedZone is required for Field Executive', 400);
+                const zoneExists = await Zone.findById(data.assignedZone);
+                if (!zoneExists) throw new AppError('Zone not found', 404);
+                await FieldExecutiveProfile.create({
+                    user: user._id,
+                    assignedZone: data.assignedZone,
+                    managedWorkers: []
+                });
+            }
+
+            Logger.info(`Executive created: ${user.email} (${data.role})`);
+            res.status(201).json({ success: true, data: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role } });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async updateExecutive(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { id } = req.params;
+            const schema = z.object({
+                name: z.string().min(2).optional(),
+                phone: z.string().min(10).optional(),
+                isActive: z.boolean().optional(),
+                assignedZones: z.array(z.string()).optional(),
+                assignedCities: z.array(z.string()).optional(),
+                assignedZone: z.string().optional(),
+                managedWorkers: z.array(z.string()).optional(),
+            });
+
+            const data = schema.parse(req.body);
+
+            const user = await User.findById(id);
+            if (!user) throw new AppError('User not found', 404);
+
+            if (data.name) user.name = data.name;
+            if (data.phone) user.phone = data.phone;
+            if (data.isActive !== undefined) user.isActive = data.isActive;
+            await user.save();
+
+            if (user.role === UserRole.ZONE_MANAGER && data.assignedZones) {
+                await ZoneManagerProfile.findOneAndUpdate(
+                    { user: id },
+                    { assignedZones: data.assignedZones },
+                    { upsert: true }
+                );
+            } else if (user.role === UserRole.CITY_MANAGER && data.assignedCities) {
+                await CityManagerProfile.findOneAndUpdate(
+                    { user: id },
+                    { assignedCities: data.assignedCities },
+                    { upsert: true }
+                );
+            } else if (user.role === UserRole.FIELD_EXECUTIVE) {
+                const update: Record<string, unknown> = {};
+                if (data.assignedZone) update.assignedZone = data.assignedZone;
+                if (data.managedWorkers) update.managedWorkers = data.managedWorkers;
+                if (Object.keys(update).length > 0) {
+                    await FieldExecutiveProfile.findOneAndUpdate(
+                        { user: id },
+                        update,
+                        { upsert: true }
+                    );
+                }
+            }
+
+            Logger.info(`Executive updated: ${user.email}`);
+            res.status(200).json({ success: true, data: { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, isActive: user.isActive } });
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({ success: false, message: error.issues[0].message });
+            }
+            next(error);
+        }
+    }
+
+    static async deactivateExecutive(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { id } = req.params;
+            const user = await User.findById(id);
+            if (!user) throw new AppError('User not found', 404);
+
+            if (![UserRole.ZONE_MANAGER, UserRole.CITY_MANAGER, UserRole.FIELD_EXECUTIVE].includes(user.role as UserRole)) {
+                throw new AppError('User is not an executive', 400);
+            }
+
+            await User.findByIdAndUpdate(id, { isActive: false });
+
+            if (user.role === UserRole.ZONE_MANAGER) {
+                await ZoneManagerProfile.findOneAndDelete({ user: id });
+            } else if (user.role === UserRole.CITY_MANAGER) {
+                await CityManagerProfile.findOneAndDelete({ user: id });
+            } else if (user.role === UserRole.FIELD_EXECUTIVE) {
+                await FieldExecutiveProfile.findOneAndDelete({ user: id });
+            }
+
+            Logger.info(`Executive deactivated: ${user.email}`);
+            res.status(200).json({ success: true, message: 'Executive deactivated' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async deleteExecutive(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { id } = req.params;
+            const user = await User.findById(id);
+            if (!user) throw new AppError('User not found', 404);
+
+            if (![UserRole.ZONE_MANAGER, UserRole.CITY_MANAGER, UserRole.FIELD_EXECUTIVE].includes(user.role as UserRole)) {
+                throw new AppError('User is not an executive', 400);
+            }
+
+            if (user.role === UserRole.ZONE_MANAGER) {
+                await ZoneManagerProfile.findOneAndDelete({ user: id });
+            } else if (user.role === UserRole.CITY_MANAGER) {
+                await CityManagerProfile.findOneAndDelete({ user: id });
+            } else if (user.role === UserRole.FIELD_EXECUTIVE) {
+                await FieldExecutiveProfile.findOneAndDelete({ user: id });
+            }
+
+            await User.findByIdAndDelete(id);
+
+            Logger.info(`Executive deleted permanently: ${user.email}`);
+            res.status(200).json({ success: true, message: 'Executive permanently deleted' });
         } catch (error) {
             next(error);
         }

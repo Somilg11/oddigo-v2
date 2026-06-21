@@ -22,6 +22,20 @@ export class FieldExecutiveController {
         }
     }
 
+    static async getVisits(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { page, limit } = req.query;
+            const result = await FieldExecutiveService.getVisits(
+                req.user._id,
+                parseInt(page as string) || 1,
+                parseInt(limit as string) || 20
+            );
+            res.status(200).json({ success: true, data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static async logVisit(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const visit = await FieldExecutiveService.logFieldVisit(req.user._id, req.params.id, req.body);

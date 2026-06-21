@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { PageError } from "@/components/common/PageError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { Users, Briefcase, DollarSign, AlertTriangle, Activity } from "lucide-react";
+import { Users, Briefcase, DollarSign, AlertTriangle, Activity, UserCheck } from "lucide-react";
 import type { DashboardStats } from "@/types";
 
 export default function DashboardPage() {
@@ -48,6 +48,7 @@ export default function DashboardPage() {
         { title: "Revenue", value: `₹${stats?.totalRevenue || 0}`, sub: `${stats?.completedJobs || 0} completed`, icon: DollarSign },
         { title: "Workers", value: stats?.totalWorkers || 0, sub: `${stats?.activeWorkers || 0} online`, icon: Users },
         { title: "Customers", value: stats?.totalCustomers || 0, sub: "", icon: Users },
+        { title: "Executives", value: stats?.totalExecutives || 0, sub: "Zone / City / Field", icon: UserCheck },
         { title: "Pending Approvals", value: stats?.pendingApprovals || 0, sub: "", icon: AlertTriangle },
         { title: "Open Complaints", value: stats?.openComplaints || 0, sub: "", icon: Activity },
     ];

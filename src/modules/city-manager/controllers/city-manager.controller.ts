@@ -22,6 +22,15 @@ export class CityManagerController {
         }
     }
 
+    static async getCampaigns(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const campaigns = await CityManagerService.getCampaigns(req.user._id);
+            res.status(200).json({ success: true, results: campaigns.length, data: campaigns });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static async createZone(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const zone = await CityManagerService.createZone(req.user._id, req.body);
@@ -44,6 +53,15 @@ export class CityManagerController {
         try {
             const campaign = await CityManagerService.createCampaign(req.user._id, req.body);
             res.status(201).json({ success: true, data: campaign });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getOverview(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const overview = await CityManagerService.getOverview(req.user._id);
+            res.status(200).json({ success: true, data: overview });
         } catch (error) {
             next(error);
         }

@@ -39,4 +39,40 @@ export class ZoneManagerController {
             next(error);
         }
     }
+
+    static async getOverview(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const overview = await ZoneManagerService.getOverview(req.user._id);
+            res.status(200).json({ success: true, data: overview });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getFieldExecutives(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const execs = await ZoneManagerService.getFieldExecutives(req.user._id);
+            res.status(200).json({ success: true, results: execs.length, data: execs });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async assignTask(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const task = await ZoneManagerService.assignTask(req.user._id, req.body);
+            res.status(201).json({ success: true, data: task });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getTaskDetails(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const task = await ZoneManagerService.getTaskDetails(req.user._id, req.params.taskId);
+            res.status(200).json({ success: true, data: task });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
